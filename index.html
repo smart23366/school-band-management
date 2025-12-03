@@ -212,7 +212,7 @@
                 renderAllModules();
             } catch (error) {
                 console.error("API Load Error:", error);
-                if (!API_URL.includes('REPLACE_THIS')) {
+                if (!API_URL.includes('AKfycbzsYj0ad_zCBf-JG0WylsQbfA60-_uOR0K3co8fizSXAXOQmgoVh8vbSkiu8hspmoVfnA')) {
                      Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบลิงก์ (API URL) หรือสิทธิ์การเข้าถึงอีกครั้ง', 'error');
                 }
             } finally {
@@ -220,30 +220,48 @@
             }
         }
 
+        // =========================================================================================
+        //  API POST FUNCTION ที่ถูกแก้ไขแล้ว: ใช้ JSON RAW BODY
+        // =========================================================================================
         async function sendDataToApi(action, payload) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const fullPayload = JSON.stringify({ action: action, payload: payload });
-                const formData = new URLSearchParams();
-                formData.append('data', fullPayload); 
 
-                await fetch(API_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', 
-                    body: formData 
+                    // ** 1. กำหนด Content-Type ให้ถูกต้อง (แก้ไข CORS/Failed to fetch) **
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: fullPayload // ** 2. ส่งข้อมูลเป็น JSON RAW BODY **
                 });
 
-                setTimeout(() => {
-                    loadDataFromApi().then(() => {
-                        Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
-                    });
-                }, 1500); 
+                // 3. ตรวจสอบสถานะการตอบกลับ
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // 4. อ่าน Response (จำเป็นสำหรับ Apps Script)
+                const data = await response.json();
+        
+                if (data && data.status === 'error' || String(data).startsWith("Error:")) {
+                    throw new Error(data.message || data);
+                }
+
+                // 5. หากสำเร็จ: โหลดข้อมูลใหม่และแจ้งเตือน
+                loadDataFromApi().then(() => {
+                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
+                });
+                
             } catch (error) {
                 console.error("API Send Error:", error);
-                Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ Apps Script (POST) อีกครั้ง', 'error');
+                Swal.fire('Error', `บันทึกข้อมูลไม่สำเร็จ: ${error.message}`, 'error');
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
+        // =========================================================================================
+
 
         // --- Render Logic (ดึงจากตัวแปร ALL_DATA) ---
         function renderAllModules() {
@@ -504,8 +522,8 @@
                 incomeTypeEl.dispatchEvent(new Event('change'));
             }
 
-            if (API_URL.includes('REPLACE_THIS')) {
-                Swal.fire('Setting Required', 'กรุณาใส่ Web App URL ในโค้ดบรรทัด 345', 'warning');
+            if (API_URL.includes('AKfycbzsYj0ad_zCBf-JG0WylsQbfA60-_uOR0K3co8fizSXAXOQmgoVh8vbSkiu8hspmoVfnA')) {
+                Swal.fire('Setting Required', 'กรุณาใส่ Web App URL ในโค้ดบรรทัด 347 ด้วย URL ของคุณ', 'warning');
             } else {
                 loadDataFromApi();
             }
@@ -513,4 +531,3 @@
     </script>
 </body>
 </html>
-

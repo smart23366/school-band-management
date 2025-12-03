@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>วงโยธวาธิตโรงเรียนแสงทอง | ระบบบริหารจัดการ (Online)</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="วงโยฯ ST">
+    <meta name="theme-color" content="#003366">
+    <link rel="apple-touch-icon" href="icons/icon-180.png" sizes="180x180">
+    <link rel="manifest" href="manifest.json">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
@@ -18,7 +26,7 @@
         .btn-expense { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; border: none; }
         .btn-misconduct { background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%); color: white; border: none; }
         .table-custom thead th { background-color: #e9ecef; color: #6c757d; }
-        /* Loading Overlay (เพิ่มเข้ามาเพื่อให้โค้ด API ทำงานได้สมบูรณ์) */
+        /* Loading Overlay */
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     </style>
 </head>
@@ -188,7 +196,6 @@
         async function loadDataFromApi() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                // GET: ใช้ method GET ชัดเจน และเพิ่ม header เพื่อให้เบราว์เซอร์รับ response ได้
                 const response = await fetch(API_URL + '?action=getAll', {
                     method: 'GET',
                     headers: {
@@ -205,7 +212,6 @@
                 renderAllModules();
             } catch (error) {
                 console.error("API Load Error:", error);
-                // ถ้ายังไม่ได้ใส่ URL ให้เตือน
                 if (!API_URL.includes('REPLACE_THIS')) {
                      Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบลิงก์ (API URL) หรือสิทธิ์การเข้าถึงอีกครั้ง', 'error');
                 }
@@ -217,14 +223,16 @@
         async function sendDataToApi(action, payload) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                // แก้ไข: ลบ Headers ออก และใช้ mode: 'no-cors' เพื่อหลีกเลี่ยง CORS Preflight Request
+                const fullPayload = JSON.stringify({ action: action, payload: payload });
+                const formData = new URLSearchParams();
+                formData.append('data', fullPayload); 
+
                 await fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors', 
-                    body: JSON.stringify({ action: action, payload: payload })
+                    body: formData 
                 });
 
-                // เมื่อใช้ no-cors เราจะไม่สามารถอ่าน response ได้ แต่ถือว่าส่งข้อมูลสำเร็จแล้ว
                 setTimeout(() => {
                     loadDataFromApi().then(() => {
                         Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
@@ -340,7 +348,6 @@
             document.getElementById('income_date').value = new Date().toISOString().split('T')[0];
         };
         
-        // Add listener to update button text when type changes
         document.getElementById('income_type')?.addEventListener('change', (e) => {
             const btn = document.getElementById('incomeSubmitBtn');
             const reasonArea = document.getElementById('income_reason');
@@ -492,14 +499,13 @@
                 if(el) el.value = today;
             });
             
-            // Trigger change for income type button text
             const incomeTypeEl = document.getElementById('income_type');
             if (incomeTypeEl) {
                 incomeTypeEl.dispatchEvent(new Event('change'));
             }
 
             if (API_URL.includes('REPLACE_THIS')) {
-                Swal.fire('Setting Required', 'กรุณาใส่ Web App URL ในโค้ดบรรทัด 337', 'warning');
+                Swal.fire('Setting Required', 'กรุณาใส่ Web App URL ในโค้ดบรรทัด 345', 'warning');
             } else {
                 loadDataFromApi();
             }

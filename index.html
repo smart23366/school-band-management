@@ -3,277 +3,514 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบริหารจัดการข้อมูล - วงโยธวาทิต</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>วงโยธวาธิตโรงเรียนแสงทอง | ระบบบริหารจัดการ (Online)</title>
     
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="วงโยฯ ST">
+    <meta name="theme-color" content="#003366">
+    <link rel="apple-touch-icon" href="icons/Smart.png" sizes="180x180">
+    <link rel="manifest" href="manifest.json">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 30px; }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        body { font-family: 'Prompt', sans-serif; background-color: #f4f6f9; color: #333; }
+        .navbar-custom { background: linear-gradient(135deg, #003366 0%, #0077c9 100%); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card-custom { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; background-color: white; }
+        .nav-tabs .nav-link { color: #555; border: none; border-radius: 10px 10px 0 0; }
+        .nav-tabs .nav-link.active { background-color: white !important; border-bottom: 3px solid #0077c9 !important; color: #0077c9 !important; font-weight: 600; }
+        .btn-save { background: linear-gradient(135deg, #0077c9 0%, #00508c 100%); color: white; border: none; }
+        .btn-expense { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; border: none; }
+        .btn-misconduct { background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%); color: white; border: none; }
+        .table-custom thead th { background-color: #e9ecef; color: #6c757d; }
+        /* Loading Overlay */
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">วงโยธวาทิตโรงเรียนแสงทอง</a>
-            <button class="btn btn-outline-light" id="adminLoginBtn" data-bs-toggle="modal" data-bs-target="#adminLoginModal">
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <p class="mt-3 fw-bold text-primary">กำลังโหลดข้อมูลจากฐานข้อมูล...</p>
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#"><i class="fas fa-drum me-2"></i> วงโยธวาธิตโรงเรียนแสงทอง</a>
+            <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#adminLoginModal" id="adminLoginBtn">
                 <i class="fas fa-user-lock me-2"></i> เข้าสู่ระบบ Admin
             </button>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="card p-4">
-            <ul class="nav nav-tabs" id="dataTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="late-tab" data-bs-toggle="tab" data-bs-target="#late" type="button" role="tab" aria-controls="late" aria-selected="true">บันทึกคนมาสาย</button>
-                </li>
-            </ul>
-            
-            <div class="tab-content" id="dataTabsContent">
-                <div class="tab-pane fade show active" id="late" role="tabpanel" aria-labelledby="late-tab">
-                    <h5 class="mt-3">ฟอร์มบันทึกคนมาสาย</h5>
-                    <form id="lateRecordForm">
-                        <div class="mb-3">
-                            <label for="employee_name" class="form-label">ชื่อนักเรียน/ผู้เล่น</label>
-                            <input type="text" class="form-control" id="late_employee_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="record_date" class="form-label">วันที่ก่อเหตุ</label>
-                            <input type="date" class="form-control" id="late_record_date" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="detail" class="form-label">รายละเอียดสาเหตุ</label>
-                            <textarea class="form-control" id="late_detail" rows="3" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">บันทึกคนมาสาย</button>
-                    </form>
+    <div class="container pb-5">
+        <ul class="nav nav-tabs mb-4 bg-white rounded-top-2 p-2 shadow-sm" id="mainTab" role="tablist">
+            <li class="nav-item"><button class="nav-link active" id="late-tab" data-bs-toggle="tab" data-bs-target="#late-pane" type="button"><i class="fas fa-user-clock me-2"></i> บันทึกคนมาสาย</button></li>
+            <li class="nav-item"><button class="nav-link" id="misconduct-tab" data-bs-toggle="tab" data-bs-target="#misconduct-pane" type="button"><i class="fas fa-exclamation-triangle me-2"></i> บันทึกคนทำผิด</button></li>
+            <li class="nav-item"><button class="nav-link" id="expense-tab" data-bs-toggle="tab" data-bs-target="#expense-pane" type="button"><i class="fas fa-money-check-alt me-2"></i> บันทึกระบบเบิกตังค์</button></li>
+            <li class="nav-item"><button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane" type="button"><i class="fas fa-chart-bar me-2"></i> สรุปสถิติ</button></li>
+            <li class="nav-item"><button class="nav-link" id="weekly-late-tab" data-bs-toggle="tab" data-bs-target="#weekly-late-pane" type="button"><i class="fas fa-calendar-week me-2"></i> มาสายรายสัปดาห์</button></li>
+        </ul>
 
-                    <h5 class="mt-4">รายการบันทึกมาสายล่าสุด (รอการดึงข้อมูล)</h5>
-                    <div id="lateRecordsDisplay" class="table-responsive">
-                        <p class="text-muted" id="lateDataStatus">กำลังดึงข้อมูล...</p>
+        <div class="tab-content" id="mainTabContent">
+            <div class="tab-pane fade show active" id="late-pane">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">ฟอร์มบันทึกมาสาย</h5>
+                            <form id="lateForm">
+                                <div class="mb-3"><label class="small">ชื่อนักเรียน/ผู้เล่น</label><input type="text" id="late_employee_name" class="form-control" required></div>
+                                <div class="mb-3"><label class="small">วันที่เกิดเหตุ</label><input type="date" id="late_record_date" class="form-control" required></div>
+                                <div class="mb-4"><label class="small">สาเหตุ</label><textarea id="late_detail" class="form-control" rows="3"></textarea></div>
+                                <button type="submit" class="btn btn-save w-100 py-2 fw-bold">บันทึกมาสาย</button>
+                            </form>
+                        </div></div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">รายการบันทึกมาสายล่าสุด</h5>
+                            <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">วันที่</th><th scope="col">ชื่อผู้เล่น</th><th scope="col">สาเหตุ</th><th scope="col">จัดการ</th></tr></thead><tbody id="lateTableBody"></tbody></table></div>
+                        </div></div>
                     </div>
                 </div>
+            </div>
+
+            <div class="tab-pane fade" id="misconduct-pane">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">ฟอร์มบันทึกทำผิดวินัย</h5>
+                            <form id="misconductForm">
+                                <div class="mb-3"><label class="small">ชื่อนักเรียน/ผู้เล่น</label><input type="text" id="misconduct_employee_name" class="form-control" required></div>
+                                <div class="mb-3"><label class="small">วันที่เกิดเหตุ</label><input type="date" id="misconduct_record_date" class="form-control" required></div>
+                                <div class="mb-4"><label class="small">รายละเอียด</label><textarea id="misconduct_detail" class="form-control" rows="3"></textarea></div>
+                                <button type="submit" class="btn btn-misconduct w-100 py-2 fw-bold">บันทึกทำผิด</button>
+                            </form>
+                        </div></div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">รายการบันทึกทำผิดวินัยล่าสุด</h5>
+                            <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">วันที่</th><th scope="col">ชื่อผู้เล่น</th><th scope="col">รายละเอียด</th><th scope="col">จัดการ</th></tr></thead><tbody id="misconductTableBody"></tbody></table></div>
+                        </div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="expense-pane">
+                <div class="card card-custom mb-4"><div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-wallet me-2"></i> สรุปสถานะการเงิน (Online)</h5>
+                    <div class="row text-center" id="financialSummary"></div>
+                </div></div>
+
+                <div class="row g-4 mb-4" id="incomeRecordsSection" style="display:none;">
+                    <div class="col-lg-4">
+                        <div class="card card-custom h-100 border-success border-3"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-success">ฟอร์มปรับยอดเงิน (Admin)</h5>
+                            <form id="incomeForm">
+                                <div class="mb-3"><label class="small">ประเภท</label><select id="income_type" class="form-control"><option value="add">เพิ่ม (+)</option><option value="reduce">ลด (-)</option></select></div>
+                                <div class="mb-3"><label class="small">วันที่</label><input type="date" id="income_date" class="form-control" required></div>
+                                <div class="mb-3"><label class="small">จำนวนเงิน</label><input type="number" id="income_amount" class="form-control" required min="1"></div>
+                                <div class="mb-4"><label class="small">สาเหตุ</label><textarea id="income_reason" class="form-control" rows="2"></textarea></div>
+                                <button type="submit" class="btn btn-success w-100 fw-bold" id="incomeSubmitBtn">บันทึกยอดเงิน</button>
+                            </form>
+                        </div></div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-success">รายการปรับยอดเงิน</h5>
+                            <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">วันที่</th><th scope="col">ประเภท</th><th scope="col">จำนวน</th><th scope="col">สาเหตุ</th><th scope="col">จัดการ</th></tr></thead><tbody id="incomeTableBody"></tbody></table></div>
+                        </div></div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-4" id="expenseFormCol">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">ฟอร์มเบิกเงิน</h5>
+                            <form id="expenseForm">
+                                <div class="mb-3"><label class="small">ชื่อผู้เบิก</label><input type="text" id="expense_employee_name" class="form-control" required></div>
+                                <div class="mb-3"><label class="small">จำนวนเงิน</label><input type="number" id="expense_amount" class="form-control" required min="10"></div>
+                                <div class="mb-3"><label class="small">วันที่เบิก</label><input type="date" id="expense_date" class="form-control" required></div>
+                                <div class="mb-3"><label class="small text-danger fw-bold"><i class="fab fa-google-drive me-1"></i> ลิงก์สลิป (Google Drive)</label><input type="url" id="expense_slip_url" class="form-control" required placeholder="วางลิงก์รูปภาพที่นี่"></div>
+                                <div class="mb-4"><label class="small">เหตุผล</label><textarea id="expense_reason" class="form-control" rows="3"></textarea></div>
+                                <button type="submit" class="btn btn-expense w-100 fw-bold">บันทึกคำขอเบิก</button>
+                            </form>
+                        </div></div>
+                    </div>
+                    <div class="col-lg-8" id="expenseTableCol">
+                        <div class="card card-custom h-100"><div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">รายการเบิกเงิน</h5>
+                            <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">วันที่</th><th scope="col">ชื่อผู้เบิก</th><th scope="col">จำนวน</th><th scope="col">สถานะ</th><th scope="col">จัดการ</th></tr></thead><tbody id="expenseTableBody"></tbody></table></div>
+                        </div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="summary-pane">
+                <div class="card card-custom"><div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">สรุปสถิติรวม</h5>
+                    <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">ชื่อผู้เล่น</th><th scope="col" class="text-center text-primary">มาสาย (ครั้ง)</th><th scope="col" class="text-center text-danger">ทำผิด (ครั้ง)</th><th scope="col" class="text-center">รวม</th></tr></thead><tbody id="summaryTableBody"></tbody></table></div>
+                </div></div>
+            </div>
+            <div class="tab-pane fade" id="weekly-late-pane">
+                <div class="card card-custom"><div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">สรุปมาสายรายสัปดาห์ <span id="weeklySummaryDateRange" class="text-primary h6"></span></h5>
+                    <div class="table-responsive"><table class="table table-custom align-middle"><thead><tr><th scope="col">ชื่อ</th><th scope="col" class="text-center">จ</th><th scope="col" class="text-center">อ</th><th scope="col" class="text-center">พ</th><th scope="col" class="text-center">พฤ</th><th scope="col" class="text-center">ศ</th><th scope="col" class="text-center">ส</th><th scope="col" class="text-center">อา</th><th scope="col" class="text-center text-danger">รวม</th></tr></thead><tbody id="weeklyLateTableBody"></tbody></table></div>
+                </div></div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="adminLoginModal" tabindex="-1" aria-labelledby="adminLoginModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="adminLoginModalLabel">เข้าสู่ระบบ Admin</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+    <div class="modal fade" id="adminLoginModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">เข้าสู่ระบบ Admin</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
                 <form id="loginForm">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" value="admin" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
-                    </div>
+                    <div class="mb-3"><label>Username</label><input type="text" class="form-control" id="username" required></div>
+                    <div class="mb-3"><label>Password</label><input type="password" class="form-control" id="password" required></div>
+                    <button type="submit" class="btn btn-save w-100 mt-3">เข้าสู่ระบบ</button>
                 </form>
             </div>
-        </div>
+        </div></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        // --- API Constants ---
-        // 🚨🚨 โปรดแทนที่ URL นี้ด้วย URL ใหม่ล่าสุดที่คุณ Deploy ใน Google Apps Script 🚨🚨
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzsYj0ad_zCBf-JG0WylsQbfA60-_uOR0K3co8fizSXAXOQmgoVh8vbSkiu8hspmoVfnA/exec';
-        const ADMIN_KEY = 'isAdminLoggedIn';
+        // =========================================================================================
+        //  CONFIG: ใส่ URL ของ Google Apps Script ที่นี่ (ต้องลงท้ายด้วย /exec เท่านั้น!)
+        // =========================================================================================
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzsYj0ad_zCBf-JG0WylsQbfA60-_uOR0K3co8fizSXAXOQmgoVh8vbSkiu8hspmoVfnA/exec'; 
+        // ^^^^^^^^^ กรุณาเปลี่ยน URL ข้างบนนี้ ให้เป็น URL ของคุณ ^^^^^^^^^^^^
+
         const ADMIN_USER = 'admin';
-        // (ใช้รหัส Hash และ Login Logic เดิมที่คุณมี)
-        const DEFAULT_ADMIN_PASS_HASH = '40b28ee0d6c8d9f9cc05c9797de3cf170be0c88144cb47f89cc6af7da3873701'; 
-        
-        // --- Security Function: SHA-256 Hashing ---
-        async function sha256(str) {
-            const buffer = new TextEncoder().encode(str);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return hashHex;
-        }
+        const ADMIN_PASS_HASH = '40b28ee0d6c8d9f9cc05c9797de3cf170be0c88144cb47f89cc6af7da3873701'; // รหัส: stband
+        const ADMIN_KEY = 'isAdminLoggedIn';
 
-        // (Login/Logout Logic Omitted for brevity, assuming it works)
-        function isAdmin() { return sessionStorage.getItem(ADMIN_KEY) === 'true'; }
-        // Note: You need to re-implement updateAdminUI and loginAdmin functions fully here.
-        // For testing, we focus on API calls.
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            // Basic mock login for testing POST functionality
-            Swal.fire('เข้าสู่ระบบสำเร็จ!', 'คุณได้รับสิทธิ์ Admin แล้ว', 'success');
-            sessionStorage.setItem(ADMIN_KEY, 'true');
-            bootstrap.Modal.getInstance(document.getElementById('adminLoginModal')).hide();
-        });
+        let ALL_DATA = { late: [], misconduct: [], expense: [], income: [] };
 
-
-        // --- API GET Function (ดึงข้อมูล) ---
-        async function fetchRecords(sheetName) {
-            const url = `${API_URL}?action=get&sheet=${sheetName}`;
+        // --- API Functions ---
+        async function loadDataFromApi() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.status === 'success' || Array.isArray(data.data)) {
-                    return data.data || [];
-                }
-                console.error(`API Fetch Error for ${sheetName}:`, data.message || 'Invalid data format');
-                return [];
-            } catch (error) {
-                console.error(`Error fetching ${sheetName}:`, error);
-                return [];
-            }
-        }
-        
-        // --- API POST Function (บันทึกข้อมูล - แก้ไขปัญหา FAILED TO FETCH) ---
-        /**
-         * ฟังก์ชันสำหรับส่งคำขอ POST ไปยัง Google Apps Script API
-         * @param {string} action - ชื่อ action ที่ต้องการให้ doPost(e) ทำงาน (เช่น 'addRecord')
-         * @param {object} payload - ข้อมูลที่จะส่งไป (เช่น sheetName, values)
-         */
-        async function sendDataToApi(action, payload) {
-            const url = API_URL; 
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    // 🚨 ส่วนสำคัญ: ต้องกำหนด Content-Type เพื่อแก้ปัญหา CORS/Failed to fetch ใน POST Request
+                const response = await fetch(API_URL + '?action=getAll', {
+                    method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ action: action, payload: payload }) 
+                        'Accept': 'application/json',
+                    }
                 });
-
+                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
-                if (data && data.status === 'error' || data.startsWith("Error:")) {
-                    throw new Error(data.message || data);
-                }
-                
-                return { success: true, message: data };
-
+                ALL_DATA = data;
+                renderAllModules();
             } catch (error) {
-                console.error(`Error during API POST (${action}):`, error);
-                // แสดงข้อความผิดพลาดที่ผู้ใช้เห็น
-                Swal.fire('ข้อผิดพลาดในการเชื่อมต่อ', `ไม่สามารถบันทึกข้อมูลได้: ${error.message}`, 'error');
-                return { success: false, message: error.message };
+                console.error("API Load Error:", error);
+                if (!API_URL.includes('REPLACE_THIS')) {
+                     Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบลิงก์ (API URL) หรือสิทธิ์การเข้าถึงอีกครั้ง', 'error');
+                }
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
-        
-        // --- Form Submission Handler ---
-        document.getElementById('lateRecordForm').addEventListener('submit', async function(e) {
+
+        async function sendDataToApi(action, payload) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const fullPayload = JSON.stringify({ action: action, payload: payload });
+                const formData = new URLSearchParams();
+                formData.append('data', fullPayload); 
+
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', 
+                    body: formData 
+                });
+
+                setTimeout(() => {
+                    loadDataFromApi().then(() => {
+                        Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
+                    });
+                }, 1500); 
+            } catch (error) {
+                console.error("API Send Error:", error);
+                Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ Apps Script (POST) อีกครั้ง', 'error');
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        }
+
+        // --- Render Logic (ดึงจากตัวแปร ALL_DATA) ---
+        function renderAllModules() {
+            renderLateRecords();
+            renderMisconductRecords();
+            renderExpenseRecords();
+            renderIncomeRecords();
+            renderSummaryTable();
+            renderWeeklyLateSummary();
+            updateFinancialSummary();
+            updateAdminUI();
+        }
+
+        // --- Late ---
+        function renderLateRecords() {
+            const tbody = document.getElementById('lateTableBody');
+            tbody.innerHTML = '';
+            ALL_DATA.late.slice().reverse().forEach(r => {
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
+                const btn = isAdmin() ? `<button onclick="deleteItem('Late', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
+                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold">${r.employee_name || '-'}</td><td>${r.detail || '-'}</td><td>${btn}</td></tr>`;
+            });
+        }
+        document.getElementById('lateForm').onsubmit = (e) => {
             e.preventDefault();
-
-            // 1. ตรวจสอบ Login (ถ้าจำเป็น)
-            if (!isAdmin()) {
-                Swal.fire('สิทธิ์ไม่พอ', 'กรุณาเข้าสู่ระบบ Admin ก่อนบันทึกข้อมูล', 'warning');
-                return;
-            }
-            
-            const employee_name = document.getElementById('late_employee_name').value;
-            const record_date = document.getElementById('late_record_date').value;
-            const detail = document.getElementById('late_detail').value;
-            
-            // ข้อมูลที่ส่งไปยัง Apps Script (เรียงตามหัวคอลัมน์ใน Sheet: id, record_date, employee_name, detail)
-            // id: เราใช้ Date.now() เป็นค่าชั่วคราวเพื่อให้มี ID ก่อนบันทึก
-            const values = [
-                Date.now(), 
-                record_date, 
-                employee_name, 
-                detail
-            ];
-
             const payload = {
-                sheetName: 'LATE', // ต้องตรงกับชื่อชีทใน Google Sheet
-                values: values
+                sheetName: 'Late',
+                values: [Date.now(), document.getElementById('late_record_date').value, document.getElementById('late_employee_name').value, document.getElementById('late_detail').value]
             };
+            sendDataToApi('addRecord', payload);
+            e.target.reset();
+            document.getElementById('late_record_date').value = new Date().toISOString().split('T')[0];
+        };
 
-            Swal.fire({
-                title: 'กำลังบันทึก...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading() }
+        // --- Misconduct ---
+        function renderMisconductRecords() {
+            const tbody = document.getElementById('misconductTableBody');
+            tbody.innerHTML = '';
+            ALL_DATA.misconduct.slice().reverse().forEach(r => {
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
+                const btn = isAdmin() ? `<button onclick="deleteItem('Misconduct', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
+                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold text-danger">${r.employee_name || '-'}</td><td class="text-danger">${r.detail || '-'}</td><td>${btn}</td></tr>`;
             });
-            
-            const result = await sendDataToApi('addRecord', payload);
+        }
+        document.getElementById('misconductForm').onsubmit = (e) => {
+            e.preventDefault();
+            const payload = {
+                sheetName: 'Misconduct',
+                values: [Date.now(), document.getElementById('misconduct_record_date').value, document.getElementById('misconduct_employee_name').value, document.getElementById('misconduct_detail').value]
+            };
+            sendDataToApi('addRecord', payload);
+            e.target.reset();
+            document.getElementById('misconduct_record_date').value = new Date().toISOString().split('T')[0];
+        };
 
-            if (result.success) {
-                Swal.fire('บันทึกสำเร็จ!', 'บันทึกข้อมูลคนมาสายเรียบร้อยแล้ว', 'success');
-                document.getElementById('lateRecordForm').reset();
-                displayLateRecords(); // โหลดข้อมูลใหม่หลังจากบันทึก
+        // --- Expense ---
+        function renderExpenseRecords() {
+            const tbody = document.getElementById('expenseTableBody');
+            tbody.innerHTML = '';
+            ALL_DATA.expense.slice().reverse().forEach(r => {
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
+                let status = r.status == 'approved' ? '<span class="badge bg-success">สำเร็จ</span>' : '<span class="badge bg-warning text-dark">รออนุมัติ</span>';
+                let btns = `<a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-info text-white me-1"><i class="fas fa-receipt"></i></a>`;
+                
+                if (isAdmin()) {
+                    if (r.status != 'approved') btns += `<button onclick="approveExpense('${r.id}')" class="btn btn-sm btn-success me-1">อนุมัติ</button>`;
+                    btns += `<button onclick="deleteItem('Expense', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>`;
+                }
+                tbody.innerHTML += `<tr><td>${date}</td><td>${r.employee_name || '-'}</td><td>${r.amount || 0}</td><td>${status}</td><td>${btns}</td></tr>`;
+            });
+        }
+        document.getElementById('expenseForm').onsubmit = (e) => {
+            e.preventDefault();
+            const payload = {
+                sheetName: 'Expense',
+                values: [Date.now(), document.getElementById('expense_date').value, document.getElementById('expense_employee_name').value, document.getElementById('expense_amount').value, document.getElementById('expense_reason').value, document.getElementById('expense_slip_url').value, 'pending']
+            };
+            sendDataToApi('addRecord', payload);
+            e.target.reset();
+            document.getElementById('expense_date').value = new Date().toISOString().split('T')[0];
+        };
+
+        // --- Income (Admin) ---
+        function renderIncomeRecords() {
+            const tbody = document.getElementById('incomeTableBody');
+            tbody.innerHTML = '';
+            ALL_DATA.income.slice().reverse().forEach(r => {
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
+                const typeText = r.type == 'add' ? '<span class="badge bg-success">เพิ่ม</span>' : '<span class="badge bg-danger">ลด</span>';
+                const btn = isAdmin() ? `<button onclick="deleteItem('Income', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
+                tbody.innerHTML += `<tr><td>${date}</td><td>${typeText}</td><td>${r.amount || 0}</td><td>${r.reason || '-'}</td><td>${btn}</td></tr>`;
+            });
+        }
+        document.getElementById('incomeForm').onsubmit = (e) => {
+            e.preventDefault();
+            const payload = {
+                sheetName: 'Income',
+                values: [Date.now(), document.getElementById('income_date').value, document.getElementById('income_type').value, document.getElementById('income_amount').value, document.getElementById('income_reason').value]
+            };
+            sendDataToApi('addRecord', payload);
+            e.target.reset();
+            document.getElementById('income_date').value = new Date().toISOString().split('T')[0];
+        };
+        
+        document.getElementById('income_type')?.addEventListener('change', (e) => {
+            const btn = document.getElementById('incomeSubmitBtn');
+            const reasonArea = document.getElementById('income_reason');
+            if (!btn || !reasonArea) return;
+
+            if (e.target.value === 'add') {
+                btn.textContent = 'บันทึกเพิ่มยอดเงิน';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-success');
+                reasonArea.placeholder = 'เช่น เงินบริจาคจากผู้ปกครอง, เงินสนับสนุน';
             } else {
-                // ข้อผิดพลาดจะถูกแสดงใน sendDataToApi แล้ว
+                btn.textContent = 'บันทึกลดยอดเงิน';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-danger');
+                reasonArea.placeholder = 'เช่น หักค่าปรับทำผิดวินัย, เงินคืนกองกลาง';
             }
         });
 
-        // --- Data Display Function (ตาราง) ---
-        async function displayLateRecords() {
-            document.getElementById('lateDataStatus').innerText = 'กำลังดึงข้อมูล...';
-            
-            const records = await fetchRecords('LATE');
-            const displayElement = document.getElementById('lateRecordsDisplay');
-            
-            if (records.length === 0) {
-                displayElement.innerHTML = '<p class="text-muted">ไม่พบข้อมูลการบันทึกมาสาย</p>';
-                return;
-            }
-            
-            let html = `
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>วันที่</th>
-                            <th>ชื่อผู้เล่น</th>
-                            <th>สาเหตุ</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            records.slice(0, 10).forEach(record => { // แสดงแค่ 10 รายการล่าสุด
-                html += `
-                    <tr>
-                        <td>${record.id}</td>
-                        <td>${record.record_date}</td>
-                        <td>${record.employee_name}</td>
-                        <td>${record.detail}</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="alert('ฟังก์ชันลบยังไม่สมบูรณ์')">ลบ</button></td>
-                    </tr>
-                `;
-            });
-
-            html += `
-                    </tbody>
-                </table>
-            `;
-            
-            displayElement.innerHTML = html;
+        // --- Utilities (API Actions) ---
+        function deleteItem(sheetName, id) {
+            if(!confirm("ยืนยันการลบ?")) return;
+            sendDataToApi('deleteRecord', { sheetName: sheetName, id: id });
+        }
+        function approveExpense(id) {
+            if(!confirm("ยืนยันอนุมัติ?")) return;
+            sendDataToApi('updateStatus', { id: id, status: 'approved' });
         }
 
-        // --- Initial Load ---
-        document.addEventListener('DOMContentLoaded', () => {
-            displayLateRecords();
-        });
+        // --- Summaries ---
+        function updateFinancialSummary() {
+            let totalIncome = 0;
+            ALL_DATA.income.forEach(r => {
+                const amount = parseFloat(r.amount) || 0;
+                if(r.type == 'add' || !r.type) totalIncome += amount;
+                else totalIncome -= amount;
+            });
+            let totalExpense = 0;
+            ALL_DATA.expense.forEach(r => {
+                const amount = parseFloat(r.amount) || 0;
+                if(r.status == 'approved') totalExpense += amount;
+            });
+            const balance = totalIncome - totalExpense;
+            
+            document.getElementById('financialSummary').innerHTML = `
+                <div class="col-4"><div class="p-2 border rounded bg-light border-primary"><h6 class="text-muted">เงินรวม</h6><h4 class="text-primary">${totalIncome.toLocaleString()}</h4></div></div>
+                <div class="col-4"><div class="p-2 border rounded bg-light border-danger"><h6 class="text-muted">เบิกแล้ว</h6><h4 class="text-danger">${totalExpense.toLocaleString()}</h4></div></div>
+                <div class="col-4"><div class="p-2 border rounded bg-light border-success"><h6 class="text-muted">คงเหลือ</h6><h4 class="text-success">${balance.toLocaleString()}</h4></div></div>
+            `;
+        }
 
+        function renderSummaryTable() {
+            const summary = {};
+            ALL_DATA.late.forEach(r => {
+                if (!r.employee_name) return; 
+                let name = String(r.employee_name).trim().toUpperCase();
+                if(!summary[name]) summary[name] = {l:0, m:0};
+                summary[name].l++;
+            });
+            ALL_DATA.misconduct.forEach(r => {
+                if (!r.employee_name) return;
+                let name = String(r.employee_name).trim().toUpperCase();
+                if(!summary[name]) summary[name] = {l:0, m:0};
+                summary[name].m++;
+            });
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = '';
+            Object.keys(summary).sort().forEach(name => {
+                tbody.innerHTML += `<tr><td class="fw-bold">${name}</td><td class="text-center text-primary">${summary[name].l}</td><td class="text-center text-danger">${summary[name].m}</td><td class="text-center fw-bold">${summary[name].l+summary[name].m}</td></tr>`;
+            });
+        }
+
+        function renderWeeklyLateSummary() {
+            const now = new Date();
+            const dayOfWeek = (now.getDay() + 6) % 7; 
+            const startDate = new Date(now); startDate.setDate(now.getDate() - dayOfWeek); startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6); endDate.setHours(23, 59, 59, 999);
+            
+            document.getElementById('weeklySummaryDateRange').innerText = `(${startDate.toLocaleDateString('th-TH', {day:'numeric', month:'short'})} - ${endDate.toLocaleDateString('th-TH', {day:'numeric', month:'short'})})`;
+
+            const currentWeekRecords = ALL_DATA.late.filter(r => {
+                if (!r.employee_name) return false; 
+                const d = new Date(r.record_date);
+                return d >= startDate && d <= endDate;
+            });
+
+            const summary = {};
+            currentWeekRecords.forEach(r => {
+                let name = String(r.employee_name).trim().toUpperCase(); 
+                if(!summary[name]) summary[name] = [0,0,0,0,0,0,0]; // Mon-Sun
+                const d = new Date(r.record_date);
+                const dayIndex = (d.getDay() + 6) % 7;
+                summary[name][dayIndex]++;
+            });
+
+            const tbody = document.getElementById('weeklyLateTableBody');
+            tbody.innerHTML = '';
+            if(Object.keys(summary).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">สัปดาห์นี้ยังไม่มีคนมาสาย</td></tr>';
+                return;
+            }
+            Object.keys(summary).sort().forEach(name => {
+                const days = summary[name].map(c => c > 0 ? c : '-').join('</td><td class="text-center">');
+                const total = summary[name].reduce((a,b)=>a+b,0);
+                tbody.innerHTML += `<tr><td class="fw-bold">${name}</td><td class="text-center">${days}</td><td class="text-center fw-bold text-danger">${total}</td></tr>`;
+            });
+        }
+
+        // --- Admin System ---
+        function isAdmin() { return sessionStorage.getItem(ADMIN_KEY) === 'true'; }
+        async function sha256(str) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        }
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if(u === ADMIN_USER && await sha256(p) === ADMIN_PASS_HASH) {
+                sessionStorage.setItem(ADMIN_KEY, 'true');
+                location.reload();
+            } else {
+                Swal.fire('Error', 'รหัสผ่านผิด', 'error');
+            }
+        };
+        function updateAdminUI() {
+            const incomeRecordsSection = document.getElementById('incomeRecordsSection');
+            if(isAdmin()) {
+                document.getElementById('adminLoginBtn').innerText = 'Admin (Logout)';
+                document.getElementById('adminLoginBtn').onclick = () => { sessionStorage.removeItem(ADMIN_KEY); location.reload(); };
+                incomeRecordsSection.style.display = 'flex';
+                document.getElementById('expenseTableCol').className = 'col-lg-4';
+                document.getElementById('expenseFormCol').className = 'col-lg-4';
+                bootstrap.Modal.getInstance(document.getElementById('adminLoginModal'))?.hide();
+            } else {
+                 document.getElementById('adminLoginBtn').innerText = 'เข้าสู่ระบบ Admin';
+                 document.getElementById('adminLoginBtn').onclick = null;
+                 incomeRecordsSection.style.display = 'none';
+                 document.getElementById('expenseTableCol').className = 'col-lg-8';
+                 document.getElementById('expenseFormCol').className = 'col-lg-4';
+            }
+        }
+
+        // --- Init ---
+        window.onload = () => {
+            const today = new Date().toISOString().split('T')[0];
+            // Set default date for all fields
+            ['late_record_date', 'misconduct_record_date', 'expense_date', 'income_date'].forEach(id => {
+                const el = document.getElementById(id); 
+                if(el) el.value = today;
+            });
+            
+            const incomeTypeEl = document.getElementById('income_type');
+            if (incomeTypeEl) {
+                incomeTypeEl.dispatchEvent(new Event('change'));
+            }
+
+            if (API_URL.includes('REPLACE_THIS')) {
+                Swal.fire('Setting Required', 'กรุณาใส่ Web App URL ในโค้ดบรรทัด 345', 'warning');
+            } else {
+                loadDataFromApi();
+            }
+        };
     </script>
 </body>
 </html>
+

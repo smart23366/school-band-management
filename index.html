@@ -172,14 +172,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ==========================================
-        //  CONFIG: ใส่ URL ของ Google Apps Script ที่นี่
-        // ==========================================
+        // =========================================================================================
+        //  CONFIG: ใส่ URL ของ Google Apps Script ที่นี่ (ต้องลงท้ายด้วย /exec เท่านั้น!)
+        // =========================================================================================
         const API_URL = 'https://script.google.com/macros/s/AKfycbwQExo65dK6hFZHO42woTwxVaNVbU5OFjtzabIuitIONHAwLxk4KCoXad9XPuyRlUlNcw/exec'; 
-        // ^^^^^^^^^ เปลี่ยน URL ข้างบนนี้ ให้เป็น URL ของคุณ ^^^^^^^^^^^^
+        // ^^^^^^^^^ กรุณาเปลี่ยน URL ข้างบนนี้ ให้เป็น URL ของคุณ ^^^^^^^^^^^^
 
         const ADMIN_USER = 'admin';
-        const ADMIN_PASS_HASH = '40b28ee0d6c8d9f9cc05c9797de3cf170be0c88144cb47f89cc6af7da3873701'; // stband
+        const ADMIN_PASS_HASH = '40b28ee0d6c8d9f9cc05c9797de3cf170be0c88144cb47f89cc6af7da3873701'; // รหัส: stband
         const ADMIN_KEY = 'isAdminLoggedIn';
 
         let ALL_DATA = { late: [], misconduct: [], expense: [], income: [] };
@@ -188,15 +188,26 @@
         async function loadDataFromApi() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const response = await fetch(API_URL + '?action=getAll');
+                // แก้ไข: ใช้ GET method ชัดเจน และเพิ่ม header
+                const response = await fetch(API_URL + '?action=getAll', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 ALL_DATA = data;
                 renderAllModules();
             } catch (error) {
-                console.error(error);
+                console.error("API Load Error:", error);
                 // ถ้ายังไม่ได้ใส่ URL ให้เตือน
                 if (!API_URL.includes('REPLACE_THIS')) {
-                    Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตหรือ URL', 'error');
+                     Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบลิงก์ (API URL) หรือสิทธิ์การเข้าถึงอีกครั้ง', 'error');
                 }
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
@@ -206,13 +217,13 @@
         async function sendDataToApi(action, payload) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
+                // แก้ไข: ลบ mode: 'no-cors' ออก เพื่อให้เบราว์เซอร์รับ response ได้ดีขึ้น
                 await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // สำคัญสำหรับ Google Apps Script
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: action, payload: payload })
                 });
-                // เนื่องจาก no-cors เราจะไม่รู้ผลลัพธ์ทันที ให้รอสักนิดแล้วโหลดใหม่
+                // ให้รอสักนิดแล้วโหลดใหม่
                 setTimeout(() => {
                     loadDataFromApi().then(() => {
                         Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
@@ -241,9 +252,9 @@
             const tbody = document.getElementById('lateTableBody');
             tbody.innerHTML = '';
             ALL_DATA.late.slice().reverse().forEach(r => {
-                const date = new Date(r.record_date).toLocaleDateString('th-TH');
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
                 const btn = isAdmin() ? `<button onclick="deleteItem('Late', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
-                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold">${r.employee_name}</td><td>${r.detail}</td><td>${btn}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold">${r.employee_name || '-'}</td><td>${r.detail || '-'}</td><td>${btn}</td></tr>`;
             });
         }
         document.getElementById('lateForm').onsubmit = (e) => {
@@ -261,9 +272,9 @@
             const tbody = document.getElementById('misconductTableBody');
             tbody.innerHTML = '';
             ALL_DATA.misconduct.slice().reverse().forEach(r => {
-                const date = new Date(r.record_date).toLocaleDateString('th-TH');
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
                 const btn = isAdmin() ? `<button onclick="deleteItem('Misconduct', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
-                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold text-danger">${r.employee_name}</td><td class="text-danger">${r.detail}</td><td>${btn}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${date}</td><td class="fw-bold text-danger">${r.employee_name || '-'}</td><td class="text-danger">${r.detail || '-'}</td><td>${btn}</td></tr>`;
             });
         }
         document.getElementById('misconductForm').onsubmit = (e) => {
@@ -281,7 +292,7 @@
             const tbody = document.getElementById('expenseTableBody');
             tbody.innerHTML = '';
             ALL_DATA.expense.slice().reverse().forEach(r => {
-                const date = new Date(r.record_date).toLocaleDateString('th-TH');
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
                 let status = r.status == 'approved' ? '<span class="badge bg-success">สำเร็จ</span>' : '<span class="badge bg-warning text-dark">รออนุมัติ</span>';
                 let btns = `<a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-info text-white me-1"><i class="fas fa-receipt"></i></a>`;
                 
@@ -289,7 +300,7 @@
                     if (r.status != 'approved') btns += `<button onclick="approveExpense('${r.id}')" class="btn btn-sm btn-success me-1">อนุมัติ</button>`;
                     btns += `<button onclick="deleteItem('Expense', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>`;
                 }
-                tbody.innerHTML += `<tr><td>${date}</td><td>${r.employee_name}</td><td>${r.amount}</td><td>${status}</td><td>${btns}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${date}</td><td>${r.employee_name || '-'}</td><td>${r.amount || 0}</td><td>${status}</td><td>${btns}</td></tr>`;
             });
         }
         document.getElementById('expenseForm').onsubmit = (e) => {
@@ -307,10 +318,10 @@
             const tbody = document.getElementById('incomeTableBody');
             tbody.innerHTML = '';
             ALL_DATA.income.slice().reverse().forEach(r => {
-                const date = new Date(r.record_date).toLocaleDateString('th-TH');
+                const date = r.record_date ? new Date(r.record_date).toLocaleDateString('th-TH') : '';
                 const typeText = r.type == 'add' ? '<span class="badge bg-success">เพิ่ม</span>' : '<span class="badge bg-danger">ลด</span>';
                 const btn = isAdmin() ? `<button onclick="deleteItem('Income', '${r.id}')" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>` : '';
-                tbody.innerHTML += `<tr><td>${date}</td><td>${typeText}</td><td>${r.amount}</td><td>${r.reason}</td><td>${btn}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${date}</td><td>${typeText}</td><td>${r.amount || 0}</td><td>${r.reason || '-'}</td><td>${btn}</td></tr>`;
             });
         }
         document.getElementById('incomeForm').onsubmit = (e) => {
@@ -337,12 +348,14 @@
         function updateFinancialSummary() {
             let totalIncome = 0;
             ALL_DATA.income.forEach(r => {
-                if(r.type == 'add' || !r.type) totalIncome += parseFloat(r.amount);
-                else totalIncome -= parseFloat(r.amount);
+                const amount = parseFloat(r.amount) || 0;
+                if(r.type == 'add' || !r.type) totalIncome += amount;
+                else totalIncome -= amount;
             });
             let totalExpense = 0;
             ALL_DATA.expense.forEach(r => {
-                if(r.status == 'approved') totalExpense += parseFloat(r.amount);
+                const amount = parseFloat(r.amount) || 0;
+                if(r.status == 'approved') totalExpense += amount;
             });
             const balance = totalIncome - totalExpense;
             
@@ -353,15 +366,18 @@
             `;
         }
 
+        // แก้ไข: จัดการค่าว่างและ undefined เพื่อไม่ให้เกิด TypeError
         function renderSummaryTable() {
             const summary = {};
             ALL_DATA.late.forEach(r => {
-                let name = r.employee_name.trim().toUpperCase();
+                if (!r.employee_name) return; 
+                let name = String(r.employee_name).trim().toUpperCase();
                 if(!summary[name]) summary[name] = {l:0, m:0};
                 summary[name].l++;
             });
             ALL_DATA.misconduct.forEach(r => {
-                let name = r.employee_name.trim().toUpperCase();
+                if (!r.employee_name) return;
+                let name = String(r.employee_name).trim().toUpperCase();
                 if(!summary[name]) summary[name] = {l:0, m:0};
                 summary[name].m++;
             });
@@ -372,6 +388,7 @@
             });
         }
 
+        // แก้ไข: จัดการค่าว่างและ undefined เพื่อไม่ให้เกิด TypeError
         function renderWeeklyLateSummary() {
             const now = new Date();
             const dayOfWeek = (now.getDay() + 6) % 7; 
@@ -381,6 +398,7 @@
             document.getElementById('weeklySummaryDateRange').innerText = `(${startDate.toLocaleDateString('th-TH', {day:'numeric', month:'short'})} - ${endDate.toLocaleDateString('th-TH', {day:'numeric', month:'short'})})`;
 
             const currentWeekRecords = ALL_DATA.late.filter(r => {
+                if (!r.employee_name) return false; // เพิ่มการตรวจสอบค่าว่างที่นี่
                 const d = new Date(r.record_date);
                 // Fix timezone issue by comparing date strings or timestamps carefully. Here we simplify.
                 return d >= startDate && d <= endDate;
@@ -388,7 +406,7 @@
 
             const summary = {};
             currentWeekRecords.forEach(r => {
-                let name = r.employee_name.trim().toUpperCase();
+                let name = String(r.employee_name).trim().toUpperCase(); // ใช้ String() ครอบเพื่อความปลอดภัย
                 if(!summary[name]) summary[name] = [0,0,0,0,0,0,0]; // Mon-Sun
                 const d = new Date(r.record_date);
                 const dayIndex = (d.getDay() + 6) % 7;
@@ -430,7 +448,6 @@
                 document.getElementById('adminLoginBtn').innerText = 'Admin (Logout)';
                 document.getElementById('adminLoginBtn').onclick = () => { sessionStorage.removeItem(ADMIN_KEY); location.reload(); };
                 document.getElementById('incomeRecordsSection').style.display = 'flex';
-                document.getElementById('incomeFormContainer').style.display = 'block';
                 document.getElementById('expenseTableCol').className = 'col-lg-4';
                 document.getElementById('expenseFormCol').className = 'col-lg-4';
                 bootstrap.Modal.getInstance(document.getElementById('adminLoginModal'))?.hide();
@@ -453,8 +470,4 @@
         };
     </script>
 </body>
-
 </html>
-
-
-

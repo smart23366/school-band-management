@@ -11,22 +11,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #f0f4f8; }
-        .navbar-st { background: linear-gradient(135deg, #003366, #00509d); border-bottom: 3px solid #ffcc00; }
+        .navbar-st { background: #003366; border-bottom: 3px solid #ffcc00; }
         .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .nav-pills .nav-link { color: #555; background: #fff; margin-right: 8px; border-radius: 10px; border: 1px solid #ddd; padding: 10px 20px; }
-        .nav-pills .nav-link.active { background-color: #003366 !important; color: white !important; }
+        .nav-pills .nav-link { background: #fff; color: #555; margin-right: 8px; border-radius: 12px; border: 1px solid #ddd; }
+        .nav-pills .nav-link.active { background: #003366 !important; color: #fff !important; }
         .admin-only { display: none !important; }
         .is-admin .admin-only { display: block !important; }
-        .is-admin .admin-table-cell { display: table-cell !important; }
-        .editable { cursor: pointer; border-bottom: 1px dashed #003366; }
+        .is-admin .admin-cell { display: table-cell !important; }
+        .editable { cursor: pointer; border-bottom: 1px dashed #00509d; }
         .editable:hover { background: #ffffcc; }
-        #syncStatus { position: fixed; bottom: 20px; left: 20px; z-index: 1050; display: none; background: #333; color: #fff; padding: 10px 20px; border-radius: 50px; }
-        .stat-card { border-radius: 15px; padding: 20px; color: white; }
+        #syncToast { position: fixed; bottom: 20px; left: 20px; z-index: 1050; display: none; background: #333; color: #fff; padding: 10px 20px; border-radius: 50px; font-size: 0.9rem; }
+        .fin-box { border-radius: 15px; padding: 15px; color: white; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="syncStatus"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูล...</div>
+<div id="syncToast"><i class="fas fa-sync fa-spin me-2"></i> ระบบกำลังจำข้อมูลและซิงค์...</div>
 
 <nav class="navbar navbar-dark navbar-st py-3 mb-4">
     <div class="container">
@@ -38,7 +38,6 @@
 </nav>
 
 <div class="container pb-5">
-    <!-- Navigation Tabs -->
     <ul class="nav nav-pills mb-4 overflow-auto flex-nowrap pb-2" id="mainTab" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pane-late">มาสาย</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-weekly">รายสัปดาห์</button></li>
@@ -57,146 +56,113 @@
                         <h5 class="fw-bold mb-3">บันทึกมาสาย</h5>
                         <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_detail'])">
                             <input type="date" id="late_date" class="form-control mb-3" required>
-                            <div class="student-search-group mb-3" data-id="late_name"></div>
-                            <textarea id="late_detail" class="form-control mb-3" placeholder="เหตุผลที่สาย" rows="2"></textarea>
+                            <div class="std-dropdown mb-3" data-id="late_name"></div>
+                            <textarea id="late_detail" class="form-control mb-3" placeholder="เหตุผลที่สาย"></textarea>
                             <button type="submit" class="btn btn-primary w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
-                <div class="col-lg-8">
-                    <div class="card p-3 table-responsive">
-                        <table class="table table-hover align-middle" id="tableLate">
-                            <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
+                <div class="col-lg-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableLate"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
             </div>
         </div>
 
-        <!-- การเงิน -->
-        <div class="tab-pane fade" id="pane-finance">
-            <div class="row g-4 mb-4">
-                <div class="col-md-4">
-                    <div class="stat-card bg-primary">
-                        <small>ยอดเงินรวม (รายรับ)</small>
-                        <h3 id="stat-total-in">0</h3>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card bg-danger">
-                        <small>ยอดเงินเบิก (จ่าย)</small>
-                        <h3 id="stat-total-out">0</h3>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card bg-success">
-                        <small>ยอดเงินคงเหลือ</small>
-                        <h3 id="stat-balance">0</h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <div class="col-lg-5">
-                    <!-- ฟอร์มเบิกเงิน (ทุกคน) -->
-                    <div class="card p-4 mb-4 border-start border-danger border-4">
-                        <h5 class="fw-bold text-danger mb-3">แจ้งเบิกเงิน</h5>
-                        <form onsubmit="handleFinanceSubmit(event)">
-                            <input type="date" id="exp_date" class="form-control mb-2" required>
-                            <div class="student-search-group mb-2" data-id="exp_name"></div>
-                            <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
-                            <input type="file" class="form-control mb-2" accept="image/*" onchange="uploadFile(this)" required>
-                            <input type="hidden" id="exp_url">
-                            <textarea id="exp_reason" class="form-control mb-3" placeholder="หมายเหตุ"></textarea>
-                            <button type="submit" id="btnExp" class="btn btn-danger w-100 fw-bold">ส่งขอเบิกเงิน</button>
-                        </form>
-                    </div>
-
-                    <!-- ฟอร์มเพิ่ม/ลดเงิน (Admin Only) -->
-                    <div class="card p-4 mb-4 admin-only border-start border-primary border-4">
-                        <h5 class="fw-bold text-primary mb-3">จัดการยอดเงิน (Admin)</h5>
-                        <form onsubmit="handleAdminIncome(event)">
-                            <input type="date" id="adm_date" class="form-control mb-2" required>
-                            <select id="adm_type" class="form-select mb-2">
-                                <option value="add">เพิ่มยอดเงิน (รายรับ)</option>
-                                <option value="reduce">หักยอดเงิน (กรณีพิเศษ)</option>
-                            </select>
-                            <input type="number" id="adm_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
-                            <input type="text" id="adm_reason" class="form-control mb-3" placeholder="ที่มาของเงิน/เหตุผล">
-                            <button type="submit" class="btn btn-primary w-100">บันทึกยอดเงิน</button>
-                        </form>
-                    </div>
-
-                    <div class="card p-4">
-                        <h6 class="fw-bold mb-3">กราฟเงิน</h6>
-                        <canvas id="financeChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="col-lg-7">
-                    <div class="card p-3 table-responsive mb-4">
-                        <h6 class="fw-bold mb-2">รายการเบิกเงินล่าสุด</h6>
-                        <table class="table table-sm" id="tableExpense">
-                            <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ยอดเบิก</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div class="card p-3 table-responsive admin-only">
-                        <h6 class="fw-bold mb-2">ประวัติการปรับยอดเงิน (Admin)</h6>
-                        <table class="table table-sm" id="tableAdminIncome">
-                            <thead><tr><th>วันที่</th><th>ประเภท</th><th>จำนวน</th><th>เหตุผล</th><th>ลบ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- หน้าสถิติและอื่นๆ -->
+        <!-- รายสัปดาห์ -->
         <div class="tab-pane fade" id="pane-weekly">
             <div class="card p-4 table-responsive">
-                <h5 class="fw-bold text-center mb-4">มาสายรายสัปดาห์ (จ-อา)</h5>
-                <table class="table table-bordered text-center" id="tableWeekly">
+                <h5 class="fw-bold text-center mb-4 text-primary">มาสายรายสัปดาห์ (จันทร์ - อาทิตย์)</h5>
+                <table class="table table-bordered text-center align-middle" id="tableWeekly">
                     <thead class="table-dark"><tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th>รวม</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
+
+        <!-- ผิดวินัย -->
         <div class="tab-pane fade" id="pane-misc">
             <div class="row g-4">
-                <div class="col-md-4"><div class="card p-4">
-                    <h5>บันทึกผิดวินัย</h5>
-                    <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_detail'])">
-                        <input type="date" id="misc_date" class="form-control mb-3" required>
-                        <div class="student-search-group mb-3" data-id="misc_name"></div>
-                        <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียด"></textarea>
-                        <button class="btn btn-danger w-100">บันทึกวินัย</button>
-                    </form>
-                </div></div>
-                <div class="col-md-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableMisc"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>รายละเอียด</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
+                <div class="col-lg-4">
+                    <div class="card p-4 border-start border-danger border-4">
+                        <h5 class="fw-bold text-danger mb-3">บันทึกผิดวินัย</h5>
+                        <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_detail'])">
+                            <input type="date" id="misc_date" class="form-control mb-3" required>
+                            <div class="std-dropdown mb-3" data-id="misc_name"></div>
+                            <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดความผิด" required></textarea>
+                            <button type="submit" class="btn btn-danger w-100 fw-bold">บันทึกวินัย</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-lg-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableMisc"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ความผิด</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
             </div>
         </div>
+
+        <!-- ขาดซ้อม -->
         <div class="tab-pane fade" id="pane-absent">
             <div class="row g-4">
-                <div class="col-md-4"><div class="card p-4">
-                    <h5>บันทึกขาดซ้อม</h5>
-                    <form onsubmit="handleForm(event, 'Absent', ['abs_date', 'abs_name', 'abs_type', 'abs_detail'])">
-                        <input type="date" id="abs_date" class="form-control mb-3" required>
-                        <div class="student-search-group mb-3" data-id="abs_name"></div>
-                        <select id="abs_type" class="form-select mb-3"><option>ซ้อมเช้า</option><option>ซ้อมเย็น</option><option>วันเสาร์</option><option>นัดพิเศษ</option></select>
-                        <textarea id="abs_detail" class="form-control mb-3" placeholder="เหตุผล"></textarea>
-                        <button class="btn btn-warning w-100 text-white">บันทึกขาดซ้อม</button>
-                    </form>
-                </div></div>
-                <div class="col-md-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableAbsent"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
+                <div class="col-lg-4">
+                    <div class="card p-4 border-start border-warning border-4">
+                        <h5 class="fw-bold text-warning mb-3">บันทึกขาดซ้อม</h5>
+                        <form onsubmit="handleForm(event, 'Absent', ['abs_date', 'abs_name', 'abs_type', 'abs_detail'])">
+                            <input type="date" id="abs_date" class="form-control mb-3" required>
+                            <div class="std-dropdown mb-3" data-id="abs_name"></div>
+                            <select id="abs_type" class="form-select mb-3" onchange="checkOther(this)">
+                                <option>ซ้อมเช้า</option><option>ซ้อมเย็น</option><option>วันเสาร์</option><option value="อื่นๆ">อื่นๆ (ระบุเอง)</option>
+                            </select>
+                            <div id="abs_other_box" class="mb-3" style="display:none;"><input type="text" id="abs_other" class="form-control" placeholder="ระบุประเภทการซ้อม"></div>
+                            <textarea id="abs_detail" class="form-control mb-3" placeholder="เหตุผล"></textarea>
+                            <button type="submit" class="btn btn-warning w-100 fw-bold text-white">บันทึกขาดซ้อม</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-lg-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableAbsent"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
             </div>
         </div>
+
+        <!-- การเงิน -->
+        <div class="tab-pane fade" id="pane-finance">
+            <div class="row g-4 mb-4 text-center">
+                <div class="col-md-4"><div class="fin-box bg-primary"><small>ยอดเงินรวม (รับ)</small><h4 id="f-in">0</h4></div></div>
+                <div class="col-md-4"><div class="fin-box bg-danger"><small>ยอดเงินเบิก (จ่าย)</small><h4 id="f-out">0</h4></div></div>
+                <div class="col-md-4"><div class="fin-box bg-success"><small>ยอดเงินคงเหลือ</small><h4 id="f-bal">0</h4></div></div>
+            </div>
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card p-4 mb-4 border-start border-danger border-4">
+                        <h5 class="fw-bold text-danger mb-3">แบบฟอร์มเบิกเงิน</h5>
+                        <form onsubmit="handleFinance(event)">
+                            <input type="date" id="exp_date" class="form-control mb-2" required>
+                            <div class="std-dropdown mb-2" data-id="exp_name"></div>
+                            <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
+                            <input type="file" class="form-control mb-2" accept="image/*" onchange="uploadImage(this)" required>
+                            <input type="hidden" id="exp_url">
+                            <textarea id="exp_reason" class="form-control mb-3" placeholder="เหตุผล"></textarea>
+                            <button type="submit" id="btnExp" class="btn btn-danger w-100 fw-bold">แจ้งเบิกเงิน</button>
+                        </form>
+                    </div>
+                    <div class="card p-4 admin-only border-start border-primary border-4 mb-4">
+                        <h5 class="fw-bold text-primary mb-3">จัดการเงิน Admin</h5>
+                        <form onsubmit="handleAdminMoney(event)">
+                            <input type="date" id="adm_date" class="form-control mb-2" required>
+                            <select id="adm_type" class="form-select mb-2"><option value="add">เพิ่มเงิน (รายรับ)</option><option value="sub">หักเงิน (พิเศษ)</option></select>
+                            <input type="number" id="adm_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
+                            <input type="text" id="adm_reason" class="form-control mb-3" placeholder="ที่มา/เหตุผล">
+                            <button type="submit" class="btn btn-primary w-100">บันทึกรายการ</button>
+                        </form>
+                    </div>
+                    <div class="card p-4"><h6>กราฟเงิน</h6><canvas id="financeChart"></canvas></div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card p-3 table-responsive mb-4"><h6>เบิกล่าสุด</h6><table class="table table-sm" id="tableExp"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card p-3 table-responsive admin-only"><h6>ประวัติเงิน Admin</h6><table class="table table-sm" id="tableAdmMoney"><thead><tr><th>วันที่</th><th>ประเภท</th><th>เงิน</th><th>เหตุผล</th><th>ลบ</th></tr></thead><tbody></tbody></table></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- สถิติรวม -->
         <div class="tab-pane fade" id="pane-stat">
             <div class="card p-4 table-responsive">
                 <h5 class="fw-bold text-center mb-4">สรุปสถิติรายบุคคล</h5>
-                <table class="table table-bordered text-center" id="tableTotalStat">
-                    <thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย</th><th>ผิดวินัย</th><th>ขาดซ้อม</th><th class="table-dark">รวม</th></tr></thead>
+                <table class="table table-bordered text-center align-middle" id="tableTotal">
+                    <thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย</th><th>วินัย</th><th>ขาดซ้อม</th><th class="table-dark">รวม</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -207,286 +173,202 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbx_rGa0arDoxbbfj0MTRgUMdIIEi-QI2nDdHpvWT-XUv8WIlDhU1ASrR5gNiyTTzBEtog/exec';
-    const ADMIN_PASS = 'stband67';
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
-    let myChart = null;
+    let chartObj = null;
 
-    // --- Admin System ---
-    function isAdm() { return localStorage.getItem('st_admin_active') === 'true'; }
+    // --- Admin ---
+    function isAdm() { return localStorage.getItem('st_adm_on') === 'true'; }
     function toggleAdmin() {
-        if(isAdm()) {
-            localStorage.removeItem('st_admin_active');
-            location.reload();
-        } else {
-            Swal.fire({ title: 'Admin Login', input: 'password', showCancelButton: true }).then(r => {
-                if(r.value === ADMIN_PASS) {
-                    localStorage.setItem('st_admin_active', 'true');
-                    location.reload();
-                } else if(r.isConfirmed) {
-                    Swal.fire('รหัสผ่านผิด', '', 'error');
-                }
+        if(isAdm()) { localStorage.removeItem('st_admin_on'); location.reload(); }
+        else {
+            Swal.fire({ title:'Admin Login', input:'password' }).then(r => {
+                if(r.value === 'stband67') { localStorage.setItem('st_admin_on','true'); location.reload(); }
+                else if(r.isConfirmed) { Swal.fire('รหัสผ่านผิด','','error'); }
             });
         }
     }
 
-    // --- Dropdown System ---
+    // --- Dropdown ---
     function renderDropdowns() {
-        const containers = document.querySelectorAll('.student-search-group');
+        const divs = document.querySelectorAll('.std-dropdown');
         const opts = ALL_DATA.students.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-        containers.forEach(div => {
+        divs.forEach(div => {
             const id = div.dataset.id;
             div.innerHTML = `
                 <div class="input-group">
-                    <input type="text" id="${id}" list="std_list" class="form-control" placeholder="พิมพ์ชื่อเพื่อค้นหา..." required>
+                    <input type="text" id="${id}" list="std_list" class="form-control" placeholder="พิมพ์ชื่อค้นหา..." required>
                     <datalist id="std_list">${opts}</datalist>
-                    <button type="button" class="btn btn-outline-secondary" onclick="addNewStudent('${id}')"><i class="fas fa-plus"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="addNewStd('${id}')"><i class="fas fa-plus"></i></button>
                 </div>`;
         });
     }
 
-    function addNewStudent(inputId) {
-        const name = document.getElementById(inputId).value.trim();
+    function addNewStd(id) {
+        const name = document.getElementById(id).value.trim();
         if(!name) return;
         if(!ALL_DATA.students.some(s => s.name === name)) {
-            ALL_DATA.students.push({ name: name });
-            renderDropdowns();
-            addToQueue({ type: 'add', sheetName: 'Students', values: [name] });
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'เพิ่มชื่อนักเรียนใหม่แล้ว', showConfirmButton: false, timer: 1000 });
+            ALL_DATA.students.push({name}); renderDropdowns();
+            addToQueue({ type:'add', sheetName:'Students', values:[name] });
         }
     }
 
-    // --- Sync System ---
-    function addToQueue(item) {
-        syncQueue.push(item);
-        localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue));
-        processSync();
-    }
+    function checkOther(sel) { document.getElementById('abs_other_box').style.display = (sel.value==='อื่นๆ')?'block':'none'; }
 
+    // --- Sync ---
+    function addToQueue(item) { syncQueue.push(item); localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); processSync(); }
     async function processSync() {
         if(syncQueue.length === 0) return;
-        document.getElementById('syncStatus').style.display = 'block';
+        document.getElementById('syncToast').style.display = 'block';
         try {
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'sync', payload: syncQueue }) });
-            syncQueue = [];
-            localStorage.removeItem('st_sync_queue');
-        } catch (e) { console.log("Sync delay..."); }
+            await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'sync', payload: syncQueue }) });
+            syncQueue = []; localStorage.removeItem('st_sync_queue');
+        } catch(e) {}
         document.getElementById('syncStatus').style.display = 'none';
+        document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- Image Upload ---
-    async function uploadFile(input) {
+    // --- Upload ---
+    async function uploadImage(input) {
         if(!input.files[0]) return;
-        const btn = document.getElementById('btnExp');
-        btn.disabled = true;
-        btn.innerText = 'กำลังอัปโหลดสลิป...';
+        const btn = document.getElementById('btnExp'); btn.disabled = true; btn.innerText = 'กำลังส่งไฟล์...';
         const file = input.files[0];
         const base64 = await new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(file); rd.onload = () => r(rd.result); });
-        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'uploadImage', payload: { base64, mimeType: file.type, fileName: `Slip_${Date.now()}` } }) });
+        const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'uploadImage', payload:{ base64, mimeType:file.type, fileName:`Slip_${Date.now()}` } }) });
         const result = await res.json();
         document.getElementById('exp_url').value = result.url;
-        btn.disabled = false;
-        btn.innerText = 'ส่งขอเบิกเงิน';
-        Swal.fire('อัปโหลดสลิปสำเร็จ', '', 'success');
+        btn.disabled = false; btn.innerText = 'แจ้งเบิกเงิน';
+        Swal.fire('รูปสลิปบันทึกลง Drive แล้ว','','success');
     }
 
-    // --- Form Handlers ---
-    function handleForm(e, sheet, fields) {
-        e.preventDefault();
-        const id = Date.now();
-        const row = { id, status: 'pending' };
-        const vals = [id];
-        fields.forEach(fid => {
-            const val = document.getElementById(fid).value;
-            const key = fid.split('_')[1];
-            const map = { name:'student_name', date:'date', detail:'detail', type:'type' };
-            row[map[key] || key] = val;
-            vals.push(val);
+    // --- Forms ---
+    function handleForm(e, sheet, fids) {
+        e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
+        fids.forEach(fid => {
+            let val = document.getElementById(fid).value;
+            if(fid==='abs_type' && val==='อื่นๆ') val = document.getElementById('abs_other').value || 'อื่นๆ';
+            const k = fid.split('_')[1]; const m = { name:'student_name', date:'date', detail:'detail', type:'type' };
+            row[m[k] || k] = val; vals.push(val);
         });
-        vals.push('pending');
-        ALL_DATA[sheet.toLowerCase()].push(row);
-        renderAll();
-        e.target.reset();
-        addToQueue({ type: 'add', sheetName: sheet, values: vals });
+        vals.push('pending'); ALL_DATA[sheet.toLowerCase()].push(row); renderAll();
+        e.target.reset(); if(document.getElementById('abs_other_box')) document.getElementById('abs_other_box').style.display='none';
+        addToQueue({ type:'add', sheetName:sheet, values:vals });
     }
 
-    function handleFinanceSubmit(e) {
-        e.preventDefault();
-        const id = Date.now();
-        const vals = [
-            id,
-            document.getElementById('exp_date').value,
-            document.getElementById('exp_name').value,
-            document.getElementById('exp_amt').value,
-            document.getElementById('exp_reason').value,
-            document.getElementById('exp_url').value,
-            'pending'
-        ];
+    function handleFinance(e) {
+        e.preventDefault(); const id = Date.now();
+        const vals = [id, document.getElementById('exp_date').value, document.getElementById('exp_name').value, document.getElementById('exp_amt').value, document.getElementById('exp_reason').value, document.getElementById('exp_url').value, 'pending'];
         ALL_DATA.expense.push({ id, date:vals[1], student_name:vals[2], amount:vals[3], reason:vals[4], slip_url:vals[5], status:'pending' });
-        renderAll();
-        e.target.reset();
-        addToQueue({ type: 'add', sheetName: 'Expense', values: vals });
+        renderAll(); e.target.reset(); addToQueue({ type:'add', sheetName:'Expense', values:vals });
     }
 
-    function handleAdminIncome(e) {
-        e.preventDefault();
-        const id = Date.now();
-        const vals = [
-            id,
-            document.getElementById('adm_date').value,
-            document.getElementById('adm_type').value,
-            document.getElementById('adm_amt').value,
-            document.getElementById('adm_reason').value
-        ];
+    function handleAdminMoney(e) {
+        e.preventDefault(); const id = Date.now();
+        const vals = [id, document.getElementById('adm_date').value, document.getElementById('adm_type').value, document.getElementById('adm_amt').value, document.getElementById('adm_reason').value];
         ALL_DATA.income.push({ id, date:vals[1], type:vals[2], amount:vals[3], reason:vals[4] });
-        renderAll();
-        e.target.reset();
-        addToQueue({ type: 'add', sheetName: 'Income', values: vals });
+        renderAll(); e.target.reset(); addToQueue({ type:'add', sheetName:'Income', values:vals });
     }
 
-    // --- Admin Table Actions ---
+    // --- Edit ---
     function makeEditable(el, sheet, id, col) {
         if(!isAdm()) return;
         const old = el.innerText;
-        el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')">✔</button></div>`;
+        el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')">Save</button></div>`;
         el.ondblclick = null;
     }
 
     function saveEdit(btn, sheet, id, col) {
-        const val = btn.previousElementSibling.value;
-        const td = btn.closest('td');
-        td.innerText = val;
+        const val = btn.previousElementSibling.value; const td = btn.closest('td'); td.innerText = val;
         td.ondblclick = () => makeEditable(td, sheet, id, col);
-        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id);
-        if(item) item[col] = val;
-        addToQueue({ type: 'update', sheetName: sheet, id, columnName: col, newValue: val });
-        calculateStats();
-    }
-
-    function updateStatus(sheet, id, st) {
-        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id);
-        if(item) {
-            item.status = st;
-            renderAll();
-            addToQueue({ type: 'update', sheetName: sheet, id, columnName: 'status', newValue: st });
-        }
-    }
-
-    function deleteRec(sheet, id) {
-        if(!confirm('ลบข้อมูล?')) return;
-        ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) item[col] = val;
+        addToQueue({ type:'update', sheetName:sheet, id, columnName:col, newValue:val });
         renderAll();
-        addToQueue({ type: 'delete', sheetName: sheet, id });
     }
 
-    // --- Calculation & Rendering ---
+    function upStatus(sheet, id, st) {
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) { item.status=st; renderAll(); addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); }
+    }
+
+    function delRec(sheet, id) {
+        if(!confirm('ลบ?')) return;
+        ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
+        renderAll(); addToQueue({ type:'delete', sheetName:sheet, id });
+    }
+
+    // --- Render ---
     function renderAll() {
-        const isA = isAdm();
-        document.body.classList.toggle('is-admin', isA);
+        const isA = isAdm(); document.body.classList.toggle('is-admin', isA);
         if(isA) document.getElementById('adminBtnText').innerText = 'ออกจาก Admin';
 
-        const rowBuilder = (data, sheet, cols) => {
-            return data.slice().reverse().map(r => `
-                <tr>
-                    <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
-                    <td class="editable fw-bold" ondblclick="makeEditable(this,'${sheet}','${r.id}','student_name')">${r.student_name || r.name}</td>
-                    ${cols.map(c => `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c] || ''}</td>`).join('')}
-                    <td><span class="status-badge status-${r.status}">${r.status==='pending'?'รอตรวจ':'ผ่าน'}</span></td>
-                    <td class="admin-only admin-table-cell">
-                        <button class="btn btn-sm btn-success" onclick="updateStatus('${sheet}','${r.id}','approved')">✔</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteRec('${sheet}','${r.id}')">🗑</button>
-                    </td>
-                </tr>`).join('');
-        };
-
-        document.querySelector('#tableLate tbody').innerHTML = rowBuilder(ALL_DATA.late, 'Late', ['detail']);
-        document.querySelector('#tableMisc tbody').innerHTML = rowBuilder(ALL_DATA.misconduct, 'Misconduct', ['detail']);
-        document.querySelector('#tableAbsent tbody').innerHTML = rowBuilder(ALL_DATA.absent, 'Absent', ['type', 'detail']);
-        
-        document.querySelector('#tableExpense tbody').innerHTML = ALL_DATA.expense.slice().reverse().map(r => `
+        const rb = (data, sheet, cols) => data.slice().reverse().map(r => `
             <tr>
                 <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
-                <td>${r.student_name}</td>
-                <td>${Number(r.amount).toLocaleString()}</td>
-                <td><a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light"><i class="fas fa-image"></i></a></td>
-                <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                <td class="admin-only admin-table-cell"><button class="btn btn-sm btn-success" onclick="updateStatus('Expense','${r.id}','approved')">✔</button></td>
+                <td class="editable fw-bold" ondblclick="makeEditable(this,'${sheet}','${r.id}','student_name')">${r.student_name || r.name}</td>
+                ${cols.map(c => `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c]||''}</td>`).join('')}
+                <td>${r.status==='pending'?'รอตรวจ':'ผ่าน'}</td>
+                <td class="admin-only admin-cell"><button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')">✔</button><button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')">🗑</button></td>
             </tr>`).join('');
 
+        document.querySelector('#tableLate tbody').innerHTML = rb(ALL_DATA.late, 'Late', ['detail']);
+        document.querySelector('#tableMisc tbody').innerHTML = rb(ALL_DATA.misconduct, 'Misconduct', ['detail']);
+        document.querySelector('#tableAbsent tbody').innerHTML = rb(ALL_DATA.absent, 'Absent', ['type', 'detail']);
+        
+        document.querySelector('#tableExp tbody').innerHTML = ALL_DATA.expense.slice().reverse().map(r => `
+            <tr><td>${new Date(r.date).toLocaleDateString('th-TH')}</td><td>${r.student_name}</td><td>${Number(r.amount).toLocaleString()}</td><td><a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light"><i class="fas fa-image"></i></a></td><td>${r.status}</td><td class="admin-only admin-cell"><button class="btn btn-sm btn-success" onclick="upStatus('Expense','${r.id}','approved')">✔</button></td></tr>`).join('');
+
         if(isA) {
-            document.querySelector('#tableAdminIncome tbody').innerHTML = ALL_DATA.income.slice().reverse().map(r => `
-                <tr>
-                    <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
-                    <td class="text-${r.type==='add'?'success':'danger'}">${r.type==='add'?'รายรับ':'หักออก'}</td>
-                    <td class="fw-bold">${Number(r.amount).toLocaleString()}</td>
-                    <td><small>${r.reason || ''}</small></td>
-                    <td><button class="btn btn-sm text-danger" onclick="deleteRec('Income','${r.id}')"><i class="fas fa-trash"></i></button></td>
-                </tr>`).join('');
+            document.querySelector('#tableAdmMoney tbody').innerHTML = ALL_DATA.income.slice().reverse().map(r => `
+                <tr><td>${new Date(r.date).toLocaleDateString('th-TH')}</td><td class="text-${r.type==='add'?'success':'danger'}">${r.type==='add'?'รับ':'หัก'}</td><td>${Number(r.amount).toLocaleString()}</td><td>${r.reason}</td><td><button class="btn btn-sm text-danger" onclick="delRec('Income','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');
         }
 
-        renderWeekly();
-        calculateStats();
-        calculateFinance();
-        renderChart();
-        renderDropdowns();
+        renderWeekly(); calculateStats(); calculateFinance(); renderChart(); renderDropdowns();
     }
 
     function calculateFinance() {
-        let totalIn = 0; let totalOut = 0;
-        ALL_DATA.income.forEach(i => { if(i.type==='add') totalIn += Number(i.amount); else totalIn -= Number(i.amount); });
-        ALL_DATA.expense.forEach(e => { if(e.status==='approved') totalOut += Number(e.amount); });
-        document.getElementById('stat-total-in').innerText = totalIn.toLocaleString();
-        document.getElementById('stat-total-out').innerText = totalOut.toLocaleString();
-        document.getElementById('stat-balance').innerText = (totalIn - totalOut).toLocaleString();
+        let ti=0; let to=0;
+        ALL_DATA.income.forEach(i => { if(i.type==='add') ti+=Number(i.amount); else ti-=Number(i.amount); });
+        ALL_DATA.expense.forEach(e => { if(e.status==='approved') to+=Number(e.amount); });
+        document.getElementById('f-in').innerText = ti.toLocaleString();
+        document.getElementById('f-out').innerText = to.toLocaleString();
+        document.getElementById('f-bal').innerText = (ti-to).toLocaleString();
     }
 
     function renderWeekly() {
-        const weekly = {}; const now = new Date();
+        const w = {}; const now = new Date();
         const start = new Date(now.setDate(now.getDate() - (now.getDay() + 6) % 7)); start.setHours(0,0,0,0);
         ALL_DATA.late.forEach(r => {
             const d = new Date(r.date); if(d >= start) {
                 const n = r.student_name || r.name; const day = (d.getDay() + 6) % 7;
-                if(!weekly[n]) weekly[n] = [0,0,0,0,0,0,0]; weekly[n][day]++;
+                if(!w[n]) w[n] = [0,0,0,0,0,0,0]; w[n][day]++;
             }
         });
-        document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(weekly).sort().map(name => `
-            <tr><td class="text-start fw-bold">${name}</td>${weekly[name].map(c => `<td>${c||''}</td>`).join('')}<td class="fw-bold">${weekly[name].reduce((a,b)=>a+b,0)}</td></tr>
-        `).join('');
+        document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(w).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td>${w[n].map(c => `<td>${c||''}</td>`).join('')}<td class="fw-bold">${w[n].reduce((a,b)=>a+b,0)}</td></tr>`).join('');
     }
 
     function calculateStats() {
-        const s = {}; const count = (list, key) => list.forEach(r => { const n = r.student_name || r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][key]++; });
-        count(ALL_DATA.late, 'l'); count(ALL_DATA.misconduct, 'm'); count(ALL_DATA.absent, 'a');
-        document.querySelector('#tableTotalStat tbody').innerHTML = Object.keys(s).sort().map(n => `
-            <tr><td class="text-start fw-bold">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>
-        `).join('');
+        const s = {}; const add = (l, k) => l.forEach(r => { const n = r.student_name || r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][k]++; });
+        add(ALL_DATA.late, 'l'); add(ALL_DATA.misconduct, 'm'); add(ALL_DATA.absent, 'a');
+        document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
     }
 
     function renderChart() {
-        const ctx = document.getElementById('financeChart');
-        const points = []; const labels = []; let cur = 0;
-        const income = ALL_DATA.income.map(i => ({ d: i.date, v: i.type==='add'?Number(i.amount):-Number(i.amount) }));
-        const expense = ALL_DATA.expense.filter(e => e.status==='approved').map(e => ({ d: e.date, v: -Number(e.amount) }));
-        const all = [...income, ...expense].sort((a,b) => new Date(a.d) - new Date(b.d));
-        
-        all.forEach(t => { cur += t.v; labels.push(new Date(t.d).toLocaleDateString('th-TH')); points.push(cur); });
-        
-        if(myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{ label:'ยอดเงิน', data:points, borderColor:'#198754', tension:0.2, fill:true, backgroundColor:'rgba(25, 135, 84, 0.1)' }] },
-            options: { plugins: { legend: { display: false } } }
-        });
+        const ctx = document.getElementById('financeChart'); if(!ctx) return;
+        const labs=[]; const pts=[]; let bal=0;
+        const inc = ALL_DATA.income.map(i => ({ d:i.date, v:i.type==='add'?Number(i.amount):-Number(i.amount) }));
+        const exp = ALL_DATA.expense.filter(e => e.status==='approved').map(e => ({ d:e.date, v:-Number(e.amount) }));
+        const all = [...inc, ...exp].sort((a,b)=> new Date(a.d) - new Date(b.d));
+        if(all.length===0){ if(chartObj) chartObj.destroy(); return; }
+        all.forEach(t => { bal+=t.v; labs.push(new Date(t.d).toLocaleDateString('th-TH')); pts.push(bal); });
+        if(chartObj) chartObj.destroy();
+        chartObj = new Chart(ctx, { type:'line', data:{ labels:labs, datasets:[{ label:'เงิน', data:pts, borderColor:'#198754', tension:0.2, fill:true, backgroundColor:'rgba(25, 135, 84, 0.1)' }] }, options:{ plugins:{ legend:{ display:false } } } });
     }
 
     async function init() {
-        const res = await fetch(API_URL + '?action=getAll');
-        ALL_DATA = await res.json();
-        renderAll();
+        try { const res = await fetch(API_URL + '?action=getAll'); ALL_DATA = await res.json(); renderAll(); } catch(e){}
     }
-    window.onload = () => {
+    window.onload = () => { 
         document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]);
-        init(); if(syncQueue.length > 0) processSync();
+        init(); if(syncQueue.length > 0) processSync(); 
     };
 </script>
 </body>

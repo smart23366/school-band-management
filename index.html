@@ -10,16 +10,14 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f0f4f8; }
+        body { font-family: 'Prompt', sans-serif; background-color: #f4f7f9; }
         .navbar-st { background: #003366; border-bottom: 3px solid #ffcc00; }
         .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .nav-pills .nav-link { background: #fff; color: #555; margin-right: 8px; border-radius: 12px; border: 1px solid #ddd; }
         .nav-pills .nav-link.active { background: #003366 !important; color: #fff !important; }
         .admin-only { display: none !important; }
         .is-admin .admin-only { display: block !important; }
-        .is-admin .admin-cell { display: table-cell !important; }
         .editable { cursor: pointer; border-bottom: 1px dashed #00509d; }
-        .editable:hover { background: #ffffcc; }
         #syncToast { position: fixed; bottom: 20px; left: 20px; z-index: 1050; display: none; background: #333; color: #fff; padding: 10px 20px; border-radius: 50px; font-size: 0.9rem; }
         .fin-box { border-radius: 15px; padding: 15px; color: white; text-align: center; }
     </style>
@@ -38,9 +36,9 @@
 </nav>
 
 <div class="container pb-5">
+    <!-- Menu -->
     <ul class="nav nav-pills mb-4 overflow-auto flex-nowrap pb-2" id="mainTab" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pane-late">มาสาย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-weekly">รายสัปดาห์</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-misc">ผิดวินัย</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-absent">ขาดซ้อม</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-finance">การเงิน</button></li>
@@ -55,25 +53,14 @@
                     <div class="card p-4">
                         <h5 class="fw-bold mb-3">บันทึกมาสาย</h5>
                         <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_detail'])">
-                            <input type="date" id="late_date" class="form-control mb-3" required>
-                            <div class="std-dropdown mb-3" data-id="late_name"></div>
+                            <input type="date" id="late_date" class="form-control mb-2" required>
+                            <div class="student-dropdown-area mb-2" data-id="late_name"></div> <!-- Dropdown ชื่อ -->
                             <textarea id="late_detail" class="form-control mb-3" placeholder="เหตุผลที่สาย"></textarea>
                             <button type="submit" class="btn btn-primary w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
                 <div class="col-lg-8"><div class="card p-3 table-responsive"><table class="table table-hover" id="tableLate"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
-            </div>
-        </div>
-
-        <!-- รายสัปดาห์ -->
-        <div class="tab-pane fade" id="pane-weekly">
-            <div class="card p-4 table-responsive">
-                <h5 class="fw-bold text-center mb-4 text-primary">มาสายรายสัปดาห์ (จันทร์ - อาทิตย์)</h5>
-                <table class="table table-bordered text-center align-middle" id="tableWeekly">
-                    <thead class="table-dark"><tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th>รวม</th></tr></thead>
-                    <tbody></tbody>
-                </table>
             </div>
         </div>
 
@@ -84,8 +71,8 @@
                     <div class="card p-4 border-start border-danger border-4">
                         <h5 class="fw-bold text-danger mb-3">บันทึกผิดวินัย</h5>
                         <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_detail'])">
-                            <input type="date" id="misc_date" class="form-control mb-3" required>
-                            <div class="std-dropdown mb-3" data-id="misc_name"></div>
+                            <input type="date" id="misc_date" class="form-control mb-2" required>
+                            <div class="student-dropdown-area mb-2" data-id="misc_name"></div> <!-- Dropdown ชื่อ -->
                             <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดความผิด" required></textarea>
                             <button type="submit" class="btn btn-danger w-100 fw-bold">บันทึกวินัย</button>
                         </form>
@@ -102,12 +89,12 @@
                     <div class="card p-4 border-start border-warning border-4">
                         <h5 class="fw-bold text-warning mb-3">บันทึกขาดซ้อม</h5>
                         <form onsubmit="handleForm(event, 'Absent', ['abs_date', 'abs_name', 'abs_type', 'abs_detail'])">
-                            <input type="date" id="abs_date" class="form-control mb-3" required>
-                            <div class="std-dropdown mb-3" data-id="abs_name"></div>
-                            <select id="abs_type" class="form-select mb-3" onchange="checkOther(this)">
+                            <input type="date" id="abs_date" class="form-control mb-2" required>
+                            <div class="student-dropdown-area mb-2" data-id="abs_name"></div> <!-- Dropdown ชื่อ -->
+                            <select id="abs_type" class="form-select mb-2" onchange="checkOther(this)">
                                 <option>ซ้อมเช้า</option><option>ซ้อมเย็น</option><option>วันเสาร์</option><option value="อื่นๆ">อื่นๆ (ระบุเอง)</option>
                             </select>
-                            <div id="abs_other_box" class="mb-3" style="display:none;"><input type="text" id="abs_other" class="form-control" placeholder="ระบุประเภทการซ้อม"></div>
+                            <div id="abs_other_box" class="mb-2" style="display:none;"><input type="text" id="abs_other" class="form-control" placeholder="ระบุประเภทการซ้อม"></div>
                             <textarea id="abs_detail" class="form-control mb-3" placeholder="เหตุผล"></textarea>
                             <button type="submit" class="btn btn-warning w-100 fw-bold text-white">บันทึกขาดซ้อม</button>
                         </form>
@@ -122,7 +109,7 @@
             <div class="row g-4 mb-4 text-center">
                 <div class="col-md-4"><div class="fin-box bg-primary"><small>ยอดเงินรวม (รับ)</small><h4 id="f-in">0</h4></div></div>
                 <div class="col-md-4"><div class="fin-box bg-danger"><small>ยอดเงินเบิก (จ่าย)</small><h4 id="f-out">0</h4></div></div>
-                <div class="col-md-4"><div class="fin-box bg-success"><small>ยอดเงินคงเหลือ</small><h4 id="f-bal">0</h4></div></div>
+                <div class="col-md-4"><div class="fin-box bg-success"><small>คงเหลือ</small><h4 id="f-bal">0</h4></div></div>
             </div>
             <div class="row g-4">
                 <div class="col-lg-5">
@@ -130,7 +117,7 @@
                         <h5 class="fw-bold text-danger mb-3">แบบฟอร์มเบิกเงิน</h5>
                         <form onsubmit="handleFinance(event)">
                             <input type="date" id="exp_date" class="form-control mb-2" required>
-                            <div class="std-dropdown mb-2" data-id="exp_name"></div>
+                            <div class="student-dropdown-area mb-2" data-id="exp_name"></div>
                             <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
                             <input type="file" class="form-control mb-2" accept="image/*" onchange="uploadImage(this)" required>
                             <input type="hidden" id="exp_url">
@@ -151,20 +138,17 @@
                     <div class="card p-4"><h6>กราฟเงิน</h6><canvas id="financeChart"></canvas></div>
                 </div>
                 <div class="col-lg-7">
-                    <div class="card p-3 table-responsive mb-4"><h6>เบิกล่าสุด</h6><table class="table table-sm" id="tableExp"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div>
-                    <div class="card p-3 table-responsive admin-only"><h6>ประวัติเงิน Admin</h6><table class="table table-sm" id="tableAdmMoney"><thead><tr><th>วันที่</th><th>ประเภท</th><th>เงิน</th><th>เหตุผล</th><th>ลบ</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card p-3 table-responsive mb-4"><h6>รายการเบิกล่าสุด</h6><table class="table table-sm" id="tableExp"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ยอดเงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card p-3 table-responsive admin-only"><h6>ประวัติเงิน Admin</h6><table class="table table-sm" id="tableAdmMoney"><thead><tr><th>วันที่</th><th>ประเภท</th><th>ยอดเงิน</th><th>เหตุผล</th><th>ลบ</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
         </div>
 
-        <!-- สถิติรวม -->
+        <!-- สถิติ -->
         <div class="tab-pane fade" id="pane-stat">
             <div class="card p-4 table-responsive">
                 <h5 class="fw-bold text-center mb-4">สรุปสถิติรายบุคคล</h5>
-                <table class="table table-bordered text-center align-middle" id="tableTotal">
-                    <thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย</th><th>วินัย</th><th>ขาดซ้อม</th><th class="table-dark">รวม</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <table class="table table-bordered text-center" id="tableTotal"><thead><tr><th>ชื่อนักเรียน</th><th>มาสาย</th><th>วินัย</th><th>ขาดซ้อม</th><th class="table-dark">รวม</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
     </div>
@@ -180,42 +164,40 @@
     // --- Admin ---
     function isAdm() { return localStorage.getItem('st_adm_on') === 'true'; }
     function toggleAdmin() {
-        if(isAdm()) { localStorage.removeItem('st_admin_on'); location.reload(); }
+        if(isAdm()) { localStorage.removeItem('st_adm_on'); location.reload(); }
         else {
             Swal.fire({ title:'Admin Login', input:'password' }).then(r => {
-                if(r.value === 'stband67') { localStorage.setItem('st_admin_on','true'); location.reload(); }
+                if(r.value === 'stband67') { localStorage.setItem('st_adm_on','true'); location.reload(); }
                 else if(r.isConfirmed) { Swal.fire('รหัสผ่านผิด','','error'); }
             });
         }
     }
 
-    // --- Dropdown ---
+    // --- Student Dropdown (The Heart of the System) ---
     function renderDropdowns() {
-        const divs = document.querySelectorAll('.std-dropdown');
+        const divs = document.querySelectorAll('.student-dropdown-area');
         const opts = ALL_DATA.students.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
         divs.forEach(div => {
             const id = div.dataset.id;
             div.innerHTML = `
                 <div class="input-group">
-                    <input type="text" id="${id}" list="std_list" class="form-control" placeholder="พิมพ์ชื่อค้นหา..." required>
+                    <input type="text" id="${id}" list="std_list" class="form-control" placeholder="พิมพ์ชื่อนักเรียนเพื่อค้นหา..." required>
                     <datalist id="std_list">${opts}</datalist>
-                    <button type="button" class="btn btn-outline-secondary" onclick="addNewStd('${id}')"><i class="fas fa-plus"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="addNewStdPrompt('${id}')"><i class="fas fa-plus"></i></button>
                 </div>`;
         });
     }
 
-    function addNewStd(id) {
-        const name = document.getElementById(id).value.trim();
-        if(!name) return;
-        if(!ALL_DATA.students.some(s => s.name === name)) {
-            ALL_DATA.students.push({name}); renderDropdowns();
+    function addNewStdPrompt(id) {
+        Swal.fire({ title:'เพิ่มนักเรียนใหม่', input:'text' }).then(r => { if(r.value){
+            const name = r.value.trim(); ALL_DATA.students.push({name}); renderDropdowns(); document.getElementById(id).value = name;
             addToQueue({ type:'add', sheetName:'Students', values:[name] });
-        }
+        }});
     }
 
     function checkOther(sel) { document.getElementById('abs_other_box').style.display = (sel.value==='อื่นๆ')?'block':'none'; }
 
-    // --- Sync ---
+    // --- Sync System ---
     function addToQueue(item) { syncQueue.push(item); localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); processSync(); }
     async function processSync() {
         if(syncQueue.length === 0) return;
@@ -223,25 +205,24 @@
         try {
             await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'sync', payload: syncQueue }) });
             syncQueue = []; localStorage.removeItem('st_sync_queue');
-        } catch(e) {}
-        document.getElementById('syncStatus').style.display = 'none';
+        } catch(e) { console.warn("Sync failed, will retry later."); }
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- Upload ---
+    // --- Image Upload ---
     async function uploadImage(input) {
         if(!input.files[0]) return;
         const btn = document.getElementById('btnExp'); btn.disabled = true; btn.innerText = 'กำลังส่งไฟล์...';
         const file = input.files[0];
         const base64 = await new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(file); rd.onload = () => r(rd.result); });
         const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'uploadImage', payload:{ base64, mimeType:file.type, fileName:`Slip_${Date.now()}` } }) });
-        const result = await res.json();
-        document.getElementById('exp_url').value = result.url;
+        const data = await res.json();
+        document.getElementById('exp_url').value = data.url;
         btn.disabled = false; btn.innerText = 'แจ้งเบิกเงิน';
         Swal.fire('รูปสลิปบันทึกลง Drive แล้ว','','success');
     }
 
-    // --- Forms ---
+    // --- Form Handlers ---
     function handleForm(e, sheet, fids) {
         e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
         fids.forEach(fid => {
@@ -269,7 +250,7 @@
         renderAll(); e.target.reset(); addToQueue({ type:'add', sheetName:'Income', values:vals });
     }
 
-    // --- Edit ---
+    // --- Admin Edit Logic ---
     function makeEditable(el, sheet, id, col) {
         if(!isAdm()) return;
         const old = el.innerText;
@@ -290,12 +271,12 @@
     }
 
     function delRec(sheet, id) {
-        if(!confirm('ลบ?')) return;
+        if(!confirm('ลบข้อมูลนี้ออกจากระบบ?')) return;
         ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
         renderAll(); addToQueue({ type:'delete', sheetName:sheet, id });
     }
 
-    // --- Render ---
+    // --- Rendering Logic ---
     function renderAll() {
         const isA = isAdm(); document.body.classList.toggle('is-admin', isA);
         if(isA) document.getElementById('adminBtnText').innerText = 'ออกจาก Admin';
@@ -305,8 +286,8 @@
                 <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
                 <td class="editable fw-bold" ondblclick="makeEditable(this,'${sheet}','${r.id}','student_name')">${r.student_name || r.name}</td>
                 ${cols.map(c => `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c]||''}</td>`).join('')}
-                <td>${r.status==='pending'?'รอตรวจ':'ผ่าน'}</td>
-                <td class="admin-only admin-cell"><button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')">✔</button><button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')">🗑</button></td>
+                <td><span class="status-badge bg-light">${r.status==='pending'?'รอตรวจ':'ผ่าน'}</span></td>
+                <td class="admin-only"><button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')">✔</button><button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')">🗑</button></td>
             </tr>`).join('');
 
         document.querySelector('#tableLate tbody').innerHTML = rb(ALL_DATA.late, 'Late', ['detail']);
@@ -321,7 +302,7 @@
                 <tr><td>${new Date(r.date).toLocaleDateString('th-TH')}</td><td class="text-${r.type==='add'?'success':'danger'}">${r.type==='add'?'รับ':'หัก'}</td><td>${Number(r.amount).toLocaleString()}</td><td>${r.reason}</td><td><button class="btn btn-sm text-danger" onclick="delRec('Income','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');
         }
 
-        renderWeekly(); calculateStats(); calculateFinance(); renderChart(); renderDropdowns();
+        calculateFinance(); renderStats(); renderChart(); renderDropdowns();
     }
 
     function calculateFinance() {
@@ -333,22 +314,10 @@
         document.getElementById('f-bal').innerText = (ti-to).toLocaleString();
     }
 
-    function renderWeekly() {
-        const w = {}; const now = new Date();
-        const start = new Date(now.setDate(now.getDate() - (now.getDay() + 6) % 7)); start.setHours(0,0,0,0);
-        ALL_DATA.late.forEach(r => {
-            const d = new Date(r.date); if(d >= start) {
-                const n = r.student_name || r.name; const day = (d.getDay() + 6) % 7;
-                if(!w[n]) w[n] = [0,0,0,0,0,0,0]; w[n][day]++;
-            }
-        });
-        document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(w).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td>${w[n].map(c => `<td>${c||''}</td>`).join('')}<td class="fw-bold">${w[n].reduce((a,b)=>a+b,0)}</td></tr>`).join('');
-    }
-
-    function calculateStats() {
+    function renderStats() {
         const s = {}; const add = (l, k) => l.forEach(r => { const n = r.student_name || r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][k]++; });
         add(ALL_DATA.late, 'l'); add(ALL_DATA.misconduct, 'm'); add(ALL_DATA.absent, 'a');
-        document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
+        document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td>${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
     }
 
     function renderChart() {
@@ -364,7 +333,7 @@
     }
 
     async function init() {
-        try { const res = await fetch(API_URL + '?action=getAll'); ALL_DATA = await res.json(); renderAll(); } catch(e){}
+        try { const res = await fetch(API_URL + '?action=getAll'); ALL_DATA = await res.json(); renderAll(); } catch(e){ console.error("Initial load failed"); }
     }
     window.onload = () => { 
         document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]);

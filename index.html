@@ -21,12 +21,9 @@
         .status-pending { background: #fff3cd; color: #856404; }
         .status-approved { background: #d4edda; color: #155724; }
         .status-rejected { background: #f8d7da; color: #721c24; }
-        
-        /* ระบบจัดการ Admin Visibility */
-        .admin-only { display: none !important; }
+        .admin-only { display: none; }
         .is-admin .admin-only { display: table-cell !important; }
         .is-admin .admin-block { display: block !important; }
-        
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; visibility: hidden; }
         .table thead { background-color: #f8f9fa; }
         .day-col { font-weight: 600; color: #00509d; width: 100px; }
@@ -37,7 +34,7 @@
 <div id="loadingOverlay">
     <div class="text-center">
         <div class="spinner-border text-primary mb-2"></div>
-        <div class="fw-bold">กำลังประมวลผลข้อมูล...</div>
+        <div>กำลังโหลดข้อมูล...</div>
     </div>
 </div>
 
@@ -163,17 +160,17 @@
                                 <input type="number" id="exp_amt" class="form-control" placeholder="จำนวนเงิน" required>
                                 <span class="input-group-text">บาท</span>
                             </div>
-                            <label class="form-label small fw-bold">แนบสลิป (รูปภาพเท่านั้น)</label>
+                            <label class="form-label small fw-bold">แนบสลิป/หลักฐาน (รูปภาพเท่านั้น)</label>
                             <input type="file" id="exp_file" class="form-control mb-1" accept="image/*" required>
-                            <div class="form-text text-danger mb-3 small">* ห้ามวิดีโอหรือเสียง</div>
+                            <div class="form-text text-danger mb-3 small">* ห้ามแนบไฟล์วิดีโอหรือเสียง</div>
                             <textarea id="exp_reason" class="form-control mb-3" placeholder="รายละเอียด/หมายเหตุ" rows="2"></textarea>
                             <button type="submit" class="btn btn-success w-100 fw-bold">แจ้งเบิกเงิน</button>
                         </form>
                     </div>
 
-                    <div class="admin-only admin-block">
+                    <div class="admin-only">
                         <div class="card p-4 border-primary border-top border-4">
-                            <h6 class="fw-bold text-primary mb-3">จัดการรายรับ (Admin)</h6>
+                            <h6 class="fw-bold text-primary mb-3">จัดการรายรับ (Admin Only)</h6>
                             <input type="date" id="inc_date" class="form-control mb-2">
                             <select id="inc_type" class="form-select mb-2">
                                 <option value="add">เพิ่มยอดเงิน (รายรับ)</option>
@@ -188,9 +185,9 @@
                 <div class="col-lg-8">
                     <div class="card p-3 bg-primary text-white mb-4">
                         <div class="row text-center">
-                            <div class="col-4 border-end">คงเหลือ<h4 id="summary-balance" class="fw-bold mt-1">0</h4></div>
-                            <div class="col-4 border-end">รายรับ<h4 id="summary-income" class="mt-1">0</h4></div>
-                            <div class="col-4">เบิกจ่าย<h4 id="summary-expense" class="mt-1 text-warning">0</h4></div>
+                            <div class="col-4 border-end">ยอดเงินคงเหลือ<h4 id="summary-balance" class="fw-bold mt-1">0</h4></div>
+                            <div class="col-4 border-end">รายรับรวม<h4 id="summary-income" class="mt-1">0</h4></div>
+                            <div class="col-4">เบิกจ่ายรวม<h4 id="summary-expense" class="mt-1 text-warning">0</h4></div>
                         </div>
                     </div>
                     <div class="card p-3 mb-4">
@@ -202,7 +199,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="admin-only admin-block">
+                    <div class="admin-only">
                         <div class="card p-3">
                             <h6 class="fw-bold mb-3">ประวัติยอดเงิน (Admin)</h6>
                             <table class="table table-sm" id="incomeTable">
@@ -216,15 +213,19 @@
         </div>
 
         <div class="tab-pane fade" id="stat-pane">
-            <div class="card p-4">
-                <h5 class="fw-bold mb-4 text-center">สรุปสถิติรายบุคคล</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle text-center" id="totalStatTable">
-                        <thead class="table-light">
-                            <tr><th>ชื่อ-นามสกุล</th><th>สาย</th><th>ผิดวินัย</th><th>ขาด</th><th class="table-dark">รวมแต้ม</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card p-4">
+                        <h5 class="fw-bold mb-4 text-center">สรุปสถิติรายบุคคล (ทั้งหมด)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle text-center" id="totalStatTable">
+                                <thead class="table-light">
+                                    <tr><th>ชื่อ-นามสกุล</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -232,141 +233,133 @@
 </div>
 
 <script>
-    const API_URL = 'ใส่_WEB_APP_URL_ที่นี่'; 
+    // --- Configuration ---
+    const API_URL = 'ใส่_WEB_APP_URL_ที่นี่'; // เปลี่ยนเป็น URL ของคุณ
+    const ADMIN_USER = 'admin';
     const ADMIN_PASS = 'stband67';
+    const ADMIN_STORAGE_KEY = 'st_band_admin_auth';
+
     let ALL_DATA = { late: [], misconduct: [], absent: [], expense: [], income: [] };
 
-    // --- ระบบ Admin Toggle (แบบใหม่ตามคำขอ) ---
-    function checkAdminStatus() {
-        return sessionStorage.getItem('st_admin_auth') === 'true';
-    }
+    // --- Core Functions ---
 
-    function updateAdminUI() {
-        const isAdm = checkAdminStatus();
-        const btn = document.getElementById('loginBtn');
-        document.body.classList.toggle('is-admin', isAdm);
-        
-        if(isAdm) {
-            btn.innerHTML = '<i class="fas fa-sign-out-alt me-1"></i> ออกจากระบบ Admin';
-            btn.className = 'btn btn-sm btn-danger';
-        } else {
-            btn.innerHTML = '<i class="fas fa-user-lock me-1"></i> เข้าสู่ระบบ Admin';
-            btn.className = 'btn btn-sm btn-outline-light';
-        }
-        renderAll();
-    }
-
-    function toggleAdmin() {
-        if (checkAdminStatus()) {
-            sessionStorage.removeItem('st_admin_auth');
-            Swal.fire('ออกจากระบบ', 'คุณกลับสู่โหมดผู้ใช้งานทั่วไป', 'info');
-            updateAdminUI();
-        } else {
-            Swal.fire({
-                title: 'Admin Login',
-                input: 'password',
-                inputPlaceholder: 'ใส่รหัสผ่าน',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                preConfirm: (pass) => {
-                    if (pass === ADMIN_PASS) return true;
-                    Swal.showValidationMessage('รหัสผ่านไม่ถูกต้อง');
-                }
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    sessionStorage.setItem('st_admin_auth', 'true');
-                    updateAdminUI();
-                    Swal.fire('สำเร็จ', 'คุณเข้าสู่โหมด Admin แล้ว', 'success');
-                }
-            });
-        }
-    }
-
-    // --- การทำงานหลัก ---
     async function handleFastAdd(event, sheetName, fieldIds) {
         if (event) event.preventDefault();
+        
         const id = Date.now();
-        const payloadValues = [id];
+        const payloadValues = [id]; // Column 1: ID
         const tempObj = { id: id };
         let fileBase64 = null;
 
+        // Validation for Images only (Expense module)
         if (sheetName === 'Expense') {
             const fileInput = document.getElementById('exp_file');
-            if (fileInput.files[0]) {
-                if (!fileInput.files[0].type.startsWith('image/')) {
-                    return Swal.fire('Error', 'แนบรูปภาพเท่านั้น!', 'error');
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                if (!file.type.startsWith('image/')) {
+                    Swal.fire('ไฟล์ไม่ถูกต้อง', 'กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น! (ห้ามแนบวิดีโอหรือเสียง)', 'error');
+                    return;
                 }
-                fileBase64 = await convertFileToBase64(fileInput.files[0]);
+                fileBase64 = await convertFileToBase64(file);
                 tempObj.slip_url = "Uploading..."; 
             }
         }
 
+        // Collect fields
         fieldIds.forEach(fid => {
             let val = document.getElementById(fid).value;
-            if (fid === 'abs_type' && val === 'อื่นๆ') val = document.getElementById('abs_other').value || 'อื่นๆ';
+            // Handle Dropdown 'Other'
+            if (fid === 'abs_type' && val === 'อื่นๆ') {
+                val = document.getElementById('abs_other').value || 'อื่นๆ';
+            }
             payloadValues.push(val);
-            const key = fid.split('_')[1];
-            const mapping = { 'name':'employee_name', 'date':'record_date', 'amt':'amount', 'reason':'reason', 'detail':'detail', 'type':'absent_type' };
-            tempObj[mapping[key] || key] = val;
+            // Map to temp object for UI
+            const key = fid.split('_')[1]; // late_name -> name
+            const fieldNameMapping = { 
+                'name': 'employee_name', 
+                'date': 'record_date', 
+                'amt': 'amount', 
+                'reason': 'reason', 
+                'detail': 'detail',
+                'type': 'absent_type'
+            };
+            tempObj[fieldNameMapping[key] || key] = val;
         });
 
+        // Default Status
         if (['Late', 'Misconduct', 'Absent', 'Expense'].includes(sheetName)) {
             tempObj.status = 'pending';
             payloadValues.push('pending');
         }
 
-        // Fast Update UI
+        // 1. Optimistic Update (UI change immediately)
         ALL_DATA[sheetName.toLowerCase()].push(tempObj);
         renderAll();
+
+        // 2. Clear Form
         if (event) event.target.reset();
         resetDateInputs();
 
-        // Send to Server
+        // 3. Send to Google Sheets (Background)
         fetch(API_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ action: 'addRecord', payload: { sheetName, values: payloadValues, fileData: fileBase64 } })
+            body: JSON.stringify({ 
+                action: 'addRecord', 
+                payload: { 
+                    sheetName: sheetName, 
+                    values: payloadValues,
+                    fileData: fileBase64 
+                } 
+            })
         });
-        Swal.fire({ toast:true, position:'top-end', icon:'success', title:'บันทึกสำเร็จ', showConfirmButton:false, timer:1500 });
+
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ (ซิงค์หลังบ้าน)', showConfirmButton: false, timer: 1500 });
     }
 
     function renderAll() {
         const isAdm = checkAdminStatus();
+        document.body.classList.toggle('is-admin', isAdm);
+
         const buildRows = (list, columns, type) => {
-            return list.slice().reverse().map(r => `
-                <tr>
-                    <td class="day-col">${getDayTh(r.record_date || r.date)}</td>
-                    ${columns.map(col => {
-                        if (col === 'date') return `<td>${new Date(r.record_date || r.date).toLocaleDateString('th-TH')}</td>`;
-                        if (col === 'status') return `<td><span class="status-badge status-${r.status}">${r.status==='pending'?'รออนุมัติ':r.status==='approved'?'อนุมัติ':'ไม่ผ่าน'}</span></td>`;
-                        if (col === 'slip') return `<td>${r.slip_url ? (r.slip_url==='Uploading...'?'โหลด...':`<a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light">ดูรูป</a>`):'-'}</td>`;
-                        return `<td>${r[col] || '-'}</td>`;
-                    }).join('')}
-                    <td class="admin-only">
+            return list.slice().reverse().map(r => {
+                let html = `<tr><td class="day-col">${getDayTh(r.record_date || r.date)}</td>`;
+                columns.forEach(col => {
+                    if (col === 'date') html += `<td>${new Date(r.record_date || r.date).toLocaleDateString('th-TH')}</td>`;
+                    else if (col === 'status') html += `<td><span class="status-badge status-${r.status}">${r.status === 'pending' ? 'รออนุมัติ' : r.status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่ผ่าน'}</span></td>`;
+                    else if (col === 'slip') html += `<td>${r.slip_url ? (r.slip_url === 'Uploading...' ? 'กำลังโหลด...' : `<a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light"><i class="fas fa-image"></i> ดูรูป</a>`) : '-'}</td>`;
+                    else html += `<td>${r[col] || '-'}</td>`;
+                });
+                if (isAdm) {
+                    html += `<td class="admin-only">
                         <div class="btn-group btn-group-sm">
                             <button onclick="updateStatus('${type}', '${r.id}', 'approved')" class="btn btn-success"><i class="fas fa-check"></i></button>
                             <button onclick="updateStatus('${type}', '${r.id}', 'rejected')" class="btn btn-warning"><i class="fas fa-times"></i></button>
                             <button onclick="deleteRecord('${type}', '${r.id}')" class="btn btn-danger"><i class="fas fa-trash"></i></button>
                         </div>
-                    </td>
-                </tr>
-            `).join('');
+                    </td>`;
+                }
+                html += `</tr>`;
+                return html;
+            }).join('');
         };
 
+        // Render Tables
         document.querySelector('#lateTable tbody').innerHTML = buildRows(ALL_DATA.late, ['date', 'employee_name', 'detail', 'status'], 'Late');
         document.querySelector('#miscTable tbody').innerHTML = buildRows(ALL_DATA.misconduct, ['date', 'employee_name', 'detail', 'status'], 'Misconduct');
         document.querySelector('#absentTable tbody').innerHTML = buildRows(ALL_DATA.absent, ['date', 'employee_name', 'absent_type', 'detail', 'status'], 'Absent');
         document.querySelector('#expenseTable tbody').innerHTML = buildRows(ALL_DATA.expense, ['date', 'employee_name', 'amount', 'slip', 'status'], 'Expense');
         
+        // Income (Special for Admin)
         if (isAdm) {
             document.querySelector('#incomeTable tbody').innerHTML = ALL_DATA.income.slice().reverse().map(r => `
                 <tr>
                     <td>${getDayTh(r.record_date)}</td>
                     <td>${new Date(r.record_date).toLocaleDateString('th-TH')}</td>
-                    <td><span class="text-${r.type==='add'?'success':'danger'}">${r.type==='add'?'+รับ':'-หัก'}</span></td>
+                    <td><span class="text-${r.type === 'add' ? 'success' : 'danger'}">${r.type === 'add' ? '+ รายรับ' : '- หักออก'}</span></td>
                     <td class="fw-bold">${Number(r.amount).toLocaleString()}</td>
                     <td><small>${r.reason || '-'}</small></td>
-                    <td><button onclick="deleteRecord('Income', '${r.id}')" class="btn btn-sm text-danger p-0"><i class="fas fa-trash"></i></button></td>
+                    <td><button onclick="deleteRecord('Income', '${r.id}')" class="btn btn-sm btn-link text-danger p-0"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('');
         }
@@ -375,62 +368,133 @@
         calculateStats();
     }
 
-    // --- Helpers ---
-    function getDayTh(dStr) {
+    // --- Helper Functions ---
+
+    function getDayTh(dateStr) {
         const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-        const d = new Date(dStr);
+        const d = new Date(dateStr);
         return isNaN(d.getTime()) ? '-' : days[d.getDay()];
     }
 
     function calculateFinance() {
-        let inc = 0, exp = 0;
-        ALL_DATA.income.forEach(r => r.type==='add' ? inc+=Number(r.amount) : inc-=Number(r.amount));
-        ALL_DATA.expense.forEach(r => r.status==='approved' ? exp+=Number(r.amount) : 0);
-        document.getElementById('summary-income').innerText = inc.toLocaleString();
-        document.getElementById('summary-expense').innerText = exp.toLocaleString();
-        document.getElementById('summary-balance').innerText = (inc - exp).toLocaleString();
+        let totalInc = 0;
+        let totalExp = 0;
+        ALL_DATA.income.forEach(r => { if(r.type === 'add') totalInc += Number(r.amount); else totalInc -= Number(r.amount); });
+        ALL_DATA.expense.forEach(r => { if(r.status === 'approved') totalExp += Number(r.amount); });
+
+        document.getElementById('summary-income').innerText = totalInc.toLocaleString();
+        document.getElementById('summary-expense').innerText = totalExp.toLocaleString();
+        document.getElementById('summary-balance').innerText = (totalInc - totalExp).toLocaleString();
     }
 
     function calculateStats() {
-        const s = {};
-        const count = (list, k) => list.forEach(r => {
-            const n = r.employee_name; if(!s[n]) s[n]={late:0,misc:0,absent:0}; s[n][k]++;
-        });
-        count(ALL_DATA.late, 'late'); count(ALL_DATA.misconduct, 'misc'); count(ALL_DATA.absent, 'absent');
-        document.querySelector('#totalStatTable tbody').innerHTML = Object.keys(s).sort().map(n => `
-            <tr><td class="text-start fw-bold">${n}</td><td>${s[n].late}</td><td>${s[n].misc}</td><td>${s[n].absent}</td><td class="table-dark">${s[n].late+s[n].misc+s[n].absent}</td></tr>
+        const stats = {};
+        const count = (list, key) => {
+            list.forEach(r => {
+                const name = r.employee_name;
+                if (!stats[name]) stats[name] = { late: 0, misc: 0, absent: 0 };
+                stats[name][key]++;
+            });
+        };
+        count(ALL_DATA.late, 'late');
+        count(ALL_DATA.misconduct, 'misc');
+        count(ALL_DATA.absent, 'absent');
+
+        const tbody = document.querySelector('#totalStatTable tbody');
+        tbody.innerHTML = Object.keys(stats).sort().map(name => `
+            <tr>
+                <td class="text-start fw-bold">${name}</td>
+                <td>${stats[name].late}</td>
+                <td>${stats[name].misc}</td>
+                <td>${stats[name].absent}</td>
+                <td class="table-dark fw-bold">${stats[name].late + stats[name].misc + stats[name].absent}</td>
+            </tr>
         `).join('');
     }
 
     function updateStatus(sheet, id, newStatus) {
         const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id);
-        if (item) { item.status = newStatus; renderAll(); 
-        fetch(API_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:'updateStatus', payload:{ sheetName:sheet, id:id, newStatus:newStatus }})}); }
+        if (item) {
+            item.status = newStatus;
+            renderAll();
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStatus', payload: { sheetName: sheet, id: id, newStatus: newStatus } }) });
+        }
     }
 
     function deleteRecord(sheet, id) {
-        if (!confirm('ลบข้อมูลนี้?')) return;
+        if (!confirm('ยืนยันการลบข้อมูลนี้?')) return;
         ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
         renderAll();
-        fetch(API_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:'deleteRecord', payload:{ sheetName:sheet, id:id }})});
+        fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'deleteRecord', payload: { sheetName: sheet, id: id } }) });
     }
 
     function convertFileToBase64(file) {
-        return new Promise((res) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); });
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
     }
 
-    function toggleOtherField(sel, boxId) { document.getElementById(boxId).classList.toggle('d-none', sel.value !== 'อื่นๆ'); }
-    function resetDateInputs() { const t = new Date().toISOString().split('T')[0]; document.querySelectorAll('input[type="date"]').forEach(el => el.value = t); }
+    function toggleOtherField(select, boxId) {
+        document.getElementById(boxId).classList.toggle('d-none', select.value !== 'อื่นๆ');
+    }
 
-    window.onload = async () => {
-        resetDateInputs();
+    // --- Auth Logic ---
+
+    function checkAdminStatus() {
+        return localStorage.getItem(ADMIN_STORAGE_KEY) === 'true';
+    }
+
+    function toggleAdmin() {
+        if (checkAdminStatus()) {
+            localStorage.removeItem(ADMIN_STORAGE_KEY);
+            location.reload();
+        } else {
+            Swal.fire({
+                title: 'Admin Login',
+                html: `<input type="text" id="sw-u" class="swal2-input" placeholder="User"><input type="password" id="sw-p" class="swal2-input" placeholder="Pass">`,
+                showCancelButton: true,
+                confirmButtonText: 'เข้าสู่ระบบ',
+                preConfirm: () => {
+                    const u = document.getElementById('sw-u').value;
+                    const p = document.getElementById('sw-p').value;
+                    if (u === ADMIN_USER && p === ADMIN_PASS) {
+                        localStorage.setItem(ADMIN_STORAGE_KEY, 'true');
+                        return true;
+                    } else {
+                        Swal.showValidationMessage('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+                    }
+                }
+            }).then((res) => { if (res.isConfirmed) renderAll(); });
+        }
+    }
+
+    // --- Initialization ---
+
+    function resetDateInputs() {
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+    }
+
+    async function loadData() {
         document.getElementById('loadingOverlay').style.visibility = 'visible';
         try {
             const res = await fetch(API_URL + '?action=getAll');
-            ALL_DATA = await res.json();
-            updateAdminUI();
-        } catch (e) { console.error(e); }
-        document.getElementById('loadingOverlay').style.visibility = 'hidden';
+            const data = await res.json();
+            ALL_DATA = data;
+            renderAll();
+        } catch (e) {
+            console.error("Load Error:", e);
+        } finally {
+            document.getElementById('loadingOverlay').style.visibility = 'hidden';
+        }
+    }
+
+    window.onload = () => {
+        resetDateInputs();
+        loadData();
     };
 </script>
 

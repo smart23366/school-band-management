@@ -3,34 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ST BAND - Management System</title>
+    <title>ST BAND - ระบบบริหารจัดการวงโยธวาธิต (V3.0)</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f4f7f9; }
+        body { font-family: 'Prompt', sans-serif; background-color: #f4f7f9; color: #333; }
         .navbar-st { background: linear-gradient(135deg, #003366, #00509d); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .card { border: none; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .nav-tabs { border: none; background: white; padding: 10px; border-radius: 12px; }
-        .nav-tabs .nav-link { border: none; color: #666; border-radius: 10px; margin-right: 5px; }
-        .nav-tabs .nav-link.active { background-color: #003366; color: white !important; }
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .nav-tabs .nav-link { border: none; color: #666; font-weight: 400; padding: 10px 15px; border-radius: 10px; }
+        .nav-tabs .nav-link.active { background-color: #003366; color: white !important; font-weight: 600; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
         .status-pending { background: #fff3cd; color: #856404; }
         .status-approved { background: #d4edda; color: #155724; }
-        .status-rejected { background: #f8d7da; color: #721c24; }
         .admin-only { display: none !important; }
         .is-admin .admin-only { display: inline-block !important; }
         .is-admin .admin-table-cell { display: table-cell !important; }
         .editable { cursor: pointer; border-bottom: 1px dashed #00509d; }
         .editable:hover { background-color: #fff9c4; }
-        #syncStatus { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: none; background: #003366; color: white; padding: 10px 20px; border-radius: 30px; }
+        #syncBadge { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: none; background: #003366; color: white; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .table-responsive { max-height: 500px; }
     </style>
 </head>
 <body>
 
-<div id="syncStatus"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูลกับ Google Sheets...</div>
+<div id="syncBadge"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูลกับ Google Sheets...</div>
 
 <nav class="navbar navbar-dark navbar-st py-3 mb-4">
     <div class="container">
@@ -43,33 +45,31 @@
 
 <div class="container pb-5">
     <ul class="nav nav-tabs mb-4 overflow-auto flex-nowrap" id="mainTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#late-pane">มาสาย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#weekly-pane">รายสัปดาห์</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#misc-pane">ผิดวินัย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#absent-pane">ไม่เข้าซ้อม</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance-pane">การเงิน</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#stat-pane">สถิติ</button></li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-late">มาสาย</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-weekly">มาสายรายสัปดาห์</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-misc">ผิดวินัย</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-absent">ขาดซ้อม</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-finance">การเงิน</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stat">สถิติรวม</button></li>
     </ul>
 
     <div class="tab-content">
-        <!-- Tab: มาสาย -->
-        <div class="tab-pane fade show active" id="late-pane">
+        <div class="tab-pane fade show active" id="tab-late">
             <div class="row g-4">
                 <div class="col-lg-4">
                     <div class="card p-4">
                         <h5 class="fw-bold mb-3">ลงชื่อมาสาย</h5>
                         <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_detail'])">
-                            <label class="small">วันที่</label>
                             <input type="date" id="late_date" class="form-control mb-3" required>
-                            <div class="student-select-box mb-3" data-id="late_name"></div>
-                            <textarea id="late_detail" class="form-control mb-3" placeholder="เหตุผลที่มาสาย" rows="2"></textarea>
-                            <button type="submit" class="btn btn-primary w-100 fw-bold">บันทึกทันที</button>
+                            <div class="student-select-area mb-3" data-id="late_name"></div>
+                            <textarea id="late_detail" class="form-control mb-3" placeholder="เหตุผลที่สาย" rows="2"></textarea>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
                 <div class="col-lg-8">
                     <div class="card p-3 table-responsive">
-                        <table class="table table-hover align-middle" id="lateTable">
+                        <table class="table table-hover align-middle" id="tableLate">
                             <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
                             <tbody></tbody>
                         </table>
@@ -78,12 +78,11 @@
             </div>
         </div>
 
-        <!-- Tab: รายสัปดาห์ -->
-        <div class="tab-pane fade" id="weekly-pane">
+        <div class="tab-pane fade" id="tab-weekly">
             <div class="card p-4">
-                <h5 class="fw-bold mb-4 text-center">สถิติมาสายรายสัปดาห์ (จันทร์ - อาทิตย์)</h5>
+                <h5 class="fw-bold text-center mb-4">มาสายรายสัปดาห์ (จันทร์ - อาทิตย์)</h5>
                 <div class="table-responsive">
-                    <table class="table table-bordered text-center" id="weeklyTable">
+                    <table class="table table-bordered text-center align-middle" id="tableWeekly">
                         <thead class="table-dark">
                             <tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th>รวม</th></tr>
                         </thead>
@@ -93,23 +92,22 @@
             </div>
         </div>
 
-        <!-- Tab: ผิดวินัย -->
-        <div class="tab-pane fade" id="misc-pane">
+        <div class="tab-pane fade" id="tab-misc">
             <div class="row g-4">
                 <div class="col-lg-4">
                     <div class="card p-4 border-start border-danger border-4">
                         <h5 class="fw-bold mb-3 text-danger">บันทึกผิดวินัย</h5>
                         <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_detail'])">
                             <input type="date" id="misc_date" class="form-control mb-3" required>
-                            <div class="student-select-box mb-3" data-id="misc_name"></div>
-                            <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดความผิด" rows="2" required></textarea>
+                            <div class="student-select-area mb-3" data-id="misc_name"></div>
+                            <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดการทำผิด" rows="2" required></textarea>
                             <button type="submit" class="btn btn-danger w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
                 <div class="col-lg-8">
                     <div class="card p-3 table-responsive">
-                        <table class="table table-hover align-middle" id="miscTable">
+                        <table class="table table-hover align-middle" id="tableMisc">
                             <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>รายละเอียด</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
                             <tbody></tbody>
                         </table>
@@ -118,20 +116,19 @@
             </div>
         </div>
 
-        <!-- Tab: ไม่เข้าซ้อม -->
-        <div class="tab-pane fade" id="absent-pane">
+        <div class="tab-pane fade" id="tab-absent">
             <div class="row g-4">
                 <div class="col-lg-4">
                     <div class="card p-4 border-start border-warning border-4">
                         <h5 class="fw-bold mb-3 text-warning">บันทึกไม่เข้าซ้อม</h5>
                         <form onsubmit="handleForm(event, 'Absent', ['abs_date', 'abs_name', 'abs_type', 'abs_detail'])">
                             <input type="date" id="abs_date" class="form-control mb-3" required>
-                            <div class="student-select-box mb-3" data-id="abs_name"></div>
+                            <div class="student-select-area mb-3" data-id="abs_name"></div>
                             <select id="abs_type" class="form-select mb-3">
                                 <option value="ซ้อมเช้า">ซ้อมเช้า</option>
                                 <option value="ซ้อมเย็น">ซ้อมเย็น</option>
                                 <option value="วันเสาร์">วันเสาร์</option>
-                                <option value="นัดพิเศษ">นัดพิเศษ</option>
+                                <option value="นัดพิเศษ">นัดซ้อมพิเศษ</option>
                             </select>
                             <textarea id="abs_detail" class="form-control mb-3" placeholder="เหตุผล" rows="2"></textarea>
                             <button type="submit" class="btn btn-warning w-100 fw-bold text-white">บันทึกข้อมูล</button>
@@ -140,7 +137,7 @@
                 </div>
                 <div class="col-lg-8">
                     <div class="card p-3 table-responsive">
-                        <table class="table table-hover align-middle" id="absentTable">
+                        <table class="table table-hover align-middle" id="tableAbsent">
                             <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
                             <tbody></tbody>
                         </table>
@@ -149,24 +146,20 @@
             </div>
         </div>
 
-        <!-- Tab: การเงิน -->
-        <div class="tab-pane fade" id="finance-pane">
+        <div class="tab-pane fade" id="tab-finance">
             <div class="row g-4">
                 <div class="col-lg-5">
                     <div class="card p-4 mb-4">
                         <h5 class="fw-bold text-success mb-3">แจ้งเบิกเงิน</h5>
                         <form onsubmit="handleFinance(event)">
                             <input type="date" id="exp_date" class="form-control mb-3" required>
-                            <div class="student-select-box mb-3" data-id="exp_name"></div>
-                            <div class="input-group mb-3">
-                                <input type="number" id="exp_amt" class="form-control" placeholder="จำนวนเงิน" required>
-                                <span class="input-group-text">บาท</span>
-                            </div>
+                            <div class="student-select-area mb-3" data-id="exp_name"></div>
+                            <input type="number" id="exp_amt" class="form-control mb-3" placeholder="จำนวนเงิน" required>
                             <label class="small fw-bold">แนบสลิป:</label>
-                            <input type="file" id="exp_file_input" class="form-control mb-2" accept="image/*" required onchange="uploadImage(this)">
-                            <input type="hidden" id="exp_url">
-                            <textarea id="exp_reason" class="form-control mb-3" placeholder="ระบุเหตุผล" rows="2"></textarea>
-                            <button type="submit" id="btnExp" class="btn btn-success w-100 fw-bold">ส่งข้อมูลเบิกเงิน</button>
+                            <input type="file" class="form-control mb-2" accept="image/*" required onchange="uploadSlip(this)">
+                            <input type="hidden" id="exp_slip_url">
+                            <textarea id="exp_reason" class="form-control mb-3" placeholder="รายละเอียด" rows="2"></textarea>
+                            <button type="submit" id="btnExp" class="btn btn-success w-100 fw-bold">แจ้งเบิกเงิน</button>
                         </form>
                     </div>
                     <div class="card p-4">
@@ -175,7 +168,7 @@
                 </div>
                 <div class="col-lg-7">
                     <div class="card p-3 table-responsive">
-                        <table class="table table-sm align-middle" id="expenseTable">
+                        <table class="table table-sm align-middle" id="tableExpense">
                             <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ยอดเงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
                             <tbody></tbody>
                         </table>
@@ -184,12 +177,11 @@
             </div>
         </div>
 
-        <!-- Tab: สถิติ -->
-        <div class="tab-pane fade" id="stat-pane">
+        <div class="tab-pane fade" id="tab-stat">
             <div class="card p-4">
                 <h5 class="fw-bold mb-4 text-center">สรุปสถิติรายบุคคล (ทั้งหมด)</h5>
                 <div class="table-responsive">
-                    <table class="table table-bordered text-center align-middle" id="totalStatTable">
+                    <table class="table table-bordered text-center" id="tableTotalStat">
                         <thead class="table-light">
                             <tr><th>ชื่อนักเรียน</th><th>มาสาย</th><th>ผิดวินัย</th><th>ขาดซ้อม</th><th class="table-dark">รวมแต้ม</th></tr>
                         </thead>
@@ -202,6 +194,7 @@
 </div>
 
 <script>
+    // --- Configuration ---
     const API_URL = 'https://script.google.com/macros/s/AKfycbx_rGa0arDoxbbfj0MTRgUMdIIEi-QI2nDdHpvWT-XUv8WIlDhU1ASrR5gNiyTTzBEtog/exec';
     const ADMIN_PASS = 'stband67';
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[] };
@@ -215,43 +208,44 @@
             localStorage.removeItem('st_admin_auth');
             location.reload();
         } else {
-            Swal.fire({ title: 'Admin Login', input: 'password', showCancelButton: true }).then(res => {
-                if(res.value === ADMIN_PASS) {
+            Swal.fire({ title: 'Admin Login', input: 'password', showCancelButton: true }).then(r => {
+                if(r.value === ADMIN_PASS) {
                     localStorage.setItem('st_admin_auth', 'true');
                     location.reload();
+                } else if(r.isConfirmed) {
+                    Swal.fire('รหัสผ่านไม่ถูกต้อง', '', 'error');
                 }
             });
         }
     }
 
-    // --- Student Dropdown System ---
-    function renderDropdowns() {
-        const boxes = document.querySelectorAll('.student-select-box');
+    // --- Student Select Area (Dropdown + Add New) ---
+    function renderStudentInputs() {
+        const areas = document.querySelectorAll('.student-select-area');
         const opts = ALL_DATA.students.map(s => `<option value="${s.name}">`).join('');
-        boxes.forEach(box => {
-            const id = box.dataset.id;
-            box.innerHTML = `
+        areas.forEach(area => {
+            const id = area.dataset.id;
+            area.innerHTML = `
                 <div class="input-group">
                     <input type="text" id="${id}" list="std_list" class="form-control" placeholder="ค้นหาหรือพิมพ์ชื่อนักเรียน" required>
                     <datalist id="std_list">${opts}</datalist>
-                    <button type="button" class="btn btn-outline-secondary" onclick="addStudent('${id}')"><i class="fas fa-user-plus"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="addNewStudent('${id}')"><i class="fas fa-user-plus"></i></button>
                 </div>`;
         });
     }
 
-    function addStudent(inputId) {
+    function addNewStudent(inputId) {
         const name = document.getElementById(inputId).value.trim();
-        if(!name) return;
-        if(!ALL_DATA.students.some(s => s.name === name)) {
-            ALL_DATA.students.push({ name });
-            renderDropdowns();
-            document.getElementById(inputId).value = name;
+        if(!name) return Swal.fire('กรุณาใส่ชื่อ','','warning');
+        if(!ALL_DATA.students.find(s => s.name === name)) {
+            ALL_DATA.students.push({ name: name });
+            renderStudentInputs();
             addToQueue({ type: 'add', sheetName: 'Students', values: [name] });
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'เพิ่มชื่อนักเรียนใหม่แล้ว', showConfirmButton: false, timer: 1000 });
+            Swal.fire({ toast: true, icon: 'success', title: 'เพิ่มชื่อเข้าระบบแล้ว', position: 'top-end', showConfirmButton: false, timer: 1000 });
         }
     }
 
-    // --- Sync & Local First ---
+    // --- Sync Queue (Local First) ---
     function addToQueue(item) {
         syncQueue.push(item);
         localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue));
@@ -260,52 +254,58 @@
 
     async function processSync() {
         if(syncQueue.length === 0) return;
-        document.getElementById('syncStatus').style.display = 'block';
+        document.getElementById('syncBadge').style.display = 'block';
         try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'sync', payload: syncQueue }) });
             if(res.ok) {
                 syncQueue = [];
                 localStorage.removeItem('st_sync_queue');
             }
-        } catch (e) { console.log("Sync waiting..."); }
-        document.getElementById('syncStatus').style.display = 'none';
+        } catch (e) { console.warn("Sync failed, will retry later."); }
+        document.getElementById('syncBadge').style.display = 'none';
     }
 
     // --- Form Handlers ---
     function handleForm(e, sheet, fields) {
-        e.preventDefault();
+        if(e) e.preventDefault();
         const id = Date.now();
-        const rowObj = { id, status: 'pending' };
+        const rowObj = { id: id, status: 'pending' };
         const values = [id];
         fields.forEach(fid => {
             const val = document.getElementById(fid).value;
-            rowObj[fid.split('_')[1]] = val;
+            const key = fid.split('_')[1]; // late_name -> name
+            const colMap = { name: 'student_name', date: 'date', detail: 'detail', type: 'type' };
+            rowObj[colMap[key] || key] = val;
             values.push(val);
         });
-        values.push('pending');
+        values.push('pending'); // Column status
+        
         ALL_DATA[sheet.toLowerCase()].push(rowObj);
         renderAll();
-        e.target.reset();
-        addToQueue({ type: 'add', sheetName: sheet, values });
+        if(e) e.target.reset();
+        resetDateInputs();
+        addToQueue({ type: 'add', sheetName: sheet, values: values });
+        Swal.fire({ toast: true, icon: 'success', title: 'บันทึกสำเร็จ!', position: 'top-end', showConfirmButton: false, timer: 1000 });
     }
 
-    async function uploadImage(input) {
+    async function uploadSlip(input) {
         if(!input.files[0]) return;
-        document.getElementById('btnExp').disabled = true;
+        const btn = document.getElementById('btnExp');
+        btn.disabled = true;
+        btn.innerText = 'กำลังอัปโหลดสลิป...';
+        
         const file = input.files[0];
-        const base64 = await new Promise(r => {
-            const reader = new FileReader();
-            reader.onload = () => r(reader.result);
-            reader.readAsDataURL(file);
-        });
+        const base64 = await new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(file); rd.onload = () => r(rd.result); });
+        
         const res = await fetch(API_URL, { 
             method: 'POST', 
             body: JSON.stringify({ action: 'uploadImage', payload: { base64, mimeType: file.type, fileName: `Slip_${Date.now()}` } }) 
         });
         const result = await res.json();
-        document.getElementById('exp_url').value = result.url;
-        document.getElementById('btnExp').disabled = false;
-        Swal.fire({ icon: 'success', title: 'สลิปถูกเก็บใน Drive แล้ว' });
+        document.getElementById('exp_slip_url').value = result.url;
+        btn.disabled = false;
+        btn.innerText = 'แจ้งเบิกเงิน';
+        Swal.fire('สลิปพร้อมใช้งาน','','success');
     }
 
     function handleFinance(e) {
@@ -317,142 +317,178 @@
             document.getElementById('exp_name').value,
             document.getElementById('exp_amt').value,
             document.getElementById('exp_reason').value,
-            document.getElementById('exp_url').value,
+            document.getElementById('exp_slip_url').value,
             'pending'
         ];
-        ALL_DATA.expense.push({ id, record_date: vals[1], student_name: vals[2], amount: vals[3], slip_url: vals[5], status: 'pending' });
+        ALL_DATA.expense.push({ id, date: vals[1], student_name: vals[2], amount: vals[3], slip_url: vals[5], status: 'pending' });
         renderAll();
         e.target.reset();
+        resetDateInputs();
         addToQueue({ type: 'add', sheetName: 'Expense', values: vals });
     }
 
-    // --- Editing (Admin) ---
+    // --- Admin Action (Editable) ---
     function makeEditable(el, sheet, id, colName) {
         if(!isAdm()) return;
         const oldVal = el.innerText;
         el.innerHTML = `
             <div class="input-group input-group-sm">
                 <input type="text" class="form-control" value="${oldVal}">
-                <button class="btn btn-primary btn-sm" onclick="saveEdit(this, '${sheet}', '${id}', '${colName}')"><i class="fas fa-save"></i></button>
+                <button class="btn btn-primary" onclick="saveEdit(this, '${sheet}', '${id}', '${colName}', '${oldVal}')"><i class="fas fa-save"></i></button>
             </div>`;
         el.ondblclick = null;
     }
 
-    function saveEdit(btn, sheet, id, col) {
+    function saveEdit(btn, sheet, id, col, oldVal) {
         const newVal = btn.previousElementSibling.value;
-        const cell = btn.closest('td');
-        cell.innerText = newVal;
-        cell.ondblclick = () => makeEditable(cell, sheet, id, col);
-        addToQueue({ type: 'update', sheetName: sheet, id, columnName: col, newValue: newVal });
+        const td = btn.closest('td');
+        td.innerText = newVal;
+        td.ondblclick = () => makeEditable(td, sheet, id, col);
+        if(newVal !== oldVal) {
+            const list = ALL_DATA[sheet.toLowerCase()];
+            const item = list.find(i => i.id == id);
+            if(item) item[col] = newVal;
+            calculateStats();
+            addToQueue({ type: 'update', sheetName: sheet, id: id, columnName: col, newValue: newVal });
+        }
     }
 
-    function updateStatus(sheet, id, st) {
-        const list = ALL_DATA[sheet.toLowerCase()];
-        const item = list.find(i => i.id == id);
+    function updateStatus(sheet, id, newSt) {
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id);
         if(item) {
-            item.status = st;
+            item.status = newSt;
             renderAll();
-            addToQueue({ type: 'update', sheetName: sheet, id, columnName: 'status', newValue: st });
+            addToQueue({ type: 'update', sheetName: sheet, id: id, columnName: 'status', newValue: newSt });
         }
     }
 
     function deleteRecord(sheet, id) {
-        if(!confirm('ยืนยันลบข้อมูลนี้?')) return;
-        ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
-        renderAll();
-        addToQueue({ type: 'delete', sheetName: sheet, id });
+        Swal.fire({ title: 'ลบข้อมูลนี้?', showCancelButton: true, confirmButtonColor: '#d33' }).then(r => {
+            if(r.isConfirmed) {
+                ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id);
+                renderAll();
+                addToQueue({ type: 'delete', sheetName: sheet, id: id });
+            }
+        });
     }
 
     // --- Rendering ---
     function renderAll() {
-        const isA = isAdm();
-        if(isA) {
-            document.body.classList.add('is-admin');
-            document.getElementById('adminBtnText').innerText = 'ออกจาก Admin';
-        }
+        const isAdmin = isAdm();
+        document.body.classList.toggle('is-admin', isAdmin);
+        if(isAdmin) document.getElementById('adminBtn').innerHTML = '<i class="fas fa-sign-out-alt"></i> ออกจาก Admin';
 
-        const buildRows = (data, sheet, cols) => {
+        const rowBuilder = (data, sheet, extraCols) => {
             return data.slice().reverse().map(r => `
                 <tr>
-                    <td>${r.record_date || r.date}</td>
+                    <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
                     <td class="editable" ondblclick="makeEditable(this, '${sheet}', '${r.id}', 'student_name')">${r.student_name || r.name}</td>
-                    ${cols.map(c => `<td class="editable" ondblclick="makeEditable(this, '${sheet}', '${r.id}', '${c}')">${r[c] || ''}</td>`).join('')}
-                    <td><span class="status-badge status-${r.status}">${r.status === 'pending' ? 'รอตรวจ' : r.status === 'approved' ? 'ผ่าน' : 'ไม่ผ่าน'}</span></td>
+                    ${extraCols.map(c => `<td class="editable" ondblclick="makeEditable(this, '${sheet}', '${r.id}', '${c}')">${r[c] || '-'}</td>`).join('')}
+                    <td><span class="status-badge status-${r.status}">${r.status === 'pending' ? 'รอตรวจ' : r.status === 'approved' ? 'อนุมัติ' : 'ไม่ผ่าน'}</span></td>
                     <td class="admin-only">
-                        <button onclick="updateStatus('${sheet}', '${r.id}', 'approved')" class="btn btn-sm btn-success">✔</button>
-                        <button onclick="deleteRecord('${sheet}', '${r.id}')" class="btn btn-sm btn-danger">🗑</button>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-success" onclick="updateStatus('${sheet}', '${r.id}', 'approved')">✔</button>
+                            <button class="btn btn-danger" onclick="deleteRecord('${sheet}', '${r.id}')">🗑</button>
+                        </div>
                     </td>
                 </tr>`).join('');
         };
 
-        document.querySelector('#lateTable tbody').innerHTML = buildRows(ALL_DATA.late, 'Late', ['detail']);
-        document.querySelector('#miscTable tbody').innerHTML = buildRows(ALL_DATA.misconduct, 'Misconduct', ['detail']);
-        document.querySelector('#absentTable tbody').innerHTML = buildRows(ALL_DATA.absent, 'Absent', ['type', 'detail']);
-        document.querySelector('#expenseTable tbody').innerHTML = ALL_DATA.expense.slice().reverse().map(r => `
+        document.querySelector('#tableLate tbody').innerHTML = rowBuilder(ALL_DATA.late, 'Late', ['detail']);
+        document.querySelector('#tableMisc tbody').innerHTML = rowBuilder(ALL_DATA.misconduct, 'Misconduct', ['detail']);
+        document.querySelector('#tableAbsent tbody').innerHTML = rowBuilder(ALL_DATA.absent, 'Absent', ['type', 'detail']);
+        
+        document.querySelector('#tableExpense tbody').innerHTML = ALL_DATA.expense.slice().reverse().map(r => `
             <tr>
-                <td>${r.record_date}</td>
+                <td>${new Date(r.date).toLocaleDateString('th-TH')}</td>
                 <td>${r.student_name}</td>
                 <td>${Number(r.amount).toLocaleString()}</td>
-                <td><a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light"><i class="fas fa-image"></i> ดูรูป</a></td>
+                <td><a href="${r.slip_url}" target="_blank" class="btn btn-sm btn-light"><i class="fas fa-image me-1"></i>สลิป</a></td>
                 <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                <td class="admin-only"><button onclick="updateStatus('Expense', '${r.id}', 'approved')" class="btn btn-sm btn-success">✔</button></td>
+                <td class="admin-only">
+                    <button class="btn btn-sm btn-success" onclick="updateStatus('Expense', '${r.id}', 'approved')">✔</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteRecord('Expense', '${r.id}')">🗑</button>
+                </td>
             </tr>`).join('');
 
-        renderWeekly();
-        renderStats();
-        renderChart();
-        renderDropdowns();
+        renderWeeklyTable();
+        calculateStats();
+        renderFinanceChart();
+        renderStudentInputs();
     }
 
-    function renderWeekly() {
+    function renderWeeklyTable() {
         const weekly = {};
-        const today = new Date();
-        const start = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Mon
+        const now = new Date();
+        const start = new Date(now.setDate(now.getDate() - now.getDay() + 1)); // จันทร์
+        const end = new Date(now.setDate(now.getDate() - now.getDay() + 7)); // อาทิตย์
+        
         ALL_DATA.late.forEach(r => {
-            const d = new Date(r.record_date);
-            if(d >= start) {
-                const day = (d.getDay() + 6) % 7; 
-                if(!weekly[r.student_name]) weekly[r.student_name] = [0,0,0,0,0,0,0];
-                weekly[r.student_name][day]++;
+            const d = new Date(r.date);
+            if(d >= start && d <= end) {
+                const name = r.student_name || r.name;
+                const day = (d.getDay() + 6) % 7; // จันทร์=0
+                if(!weekly[name]) weekly[name] = [0,0,0,0,0,0,0];
+                weekly[name][day]++;
             }
         });
-        document.querySelector('#weeklyTable tbody').innerHTML = Object.keys(weekly).map(name => `
-            <tr><td>${name}</td>${weekly[name].map(c => `<td>${c || ''}</td>`).join('')}<td class="fw-bold">${weekly[name].reduce((a,b)=>a+b,0)}</td></tr>
-        `).join('');
+        document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(weekly).sort().map(name => `
+            <tr>
+                <td class="text-start fw-bold">${name}</td>
+                ${weekly[name].map(c => `<td>${c || ''}</td>`).join('')}
+                <td class="table-primary fw-bold">${weekly[name].reduce((a,b)=>a+b,0)}</td>
+            </tr>`).join('');
     }
 
-    function renderStats() {
+    function calculateStats() {
         const s = {};
-        const add = (list, key) => list.forEach(r => {
-            const n = r.student_name || r.name;
-            if(!s[n]) s[n] = {l:0, m:0, a:0};
-            s[n][key]++;
-        });
+        const add = (list, key) => list.forEach(r => { const n = r.student_name || r.name; if(!s[n]) s[n] = {l:0,m:0,a:0}; s[n][key]++; });
         add(ALL_DATA.late, 'l'); add(ALL_DATA.misconduct, 'm'); add(ALL_DATA.absent, 'a');
-        document.querySelector('#totalStatTable tbody').innerHTML = Object.keys(s).sort().map(n => `
-            <tr><td>${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark">${s[n].l+s[n].m+s[n].a}</td></tr>
-        `).join('');
+        document.querySelector('#tableTotalStat tbody').innerHTML = Object.keys(s).sort().map(n => `
+            <tr>
+                <td class="text-start fw-bold">${n}</td>
+                <td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td>
+                <td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td>
+            </tr>`).join('');
     }
 
-    function renderChart() {
+    function renderFinanceChart() {
         const ctx = document.getElementById('financeChart');
-        const data = ALL_DATA.income.slice(-5).map(i => i.amount);
-        const labs = ALL_DATA.income.slice(-5).map(i => i.record_date);
+        if(!ctx) return;
+        const balanceData = [];
+        const labels = [];
+        let cur = 0;
+        const income = ALL_DATA.income.map(i => ({ date: i.date, amt: Number(i.amount) }));
+        const expense = ALL_DATA.expense.filter(e => e.status === 'approved').map(e => ({ date: e.date, amt: -Number(e.amount) }));
+        const all = [...income, ...expense].sort((a,b) => new Date(a.date) - new Date(b.date));
+        all.forEach(t => { cur += t.amt; labels.push(new Date(t.date).toLocaleDateString('th-TH')); balanceData.push(cur); });
+        
         if(myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'line',
-            data: { labels: labs, datasets:[{ label: 'ยอดเงินเข้า', data: data, borderColor: '#00509d', tension: 0.1 }] }
+            data: { labels: labels, datasets: [{ label: 'เงินคงเหลือ', data: balanceData, borderColor: '#198754', tension: 0.2, fill: true, backgroundColor: 'rgba(25, 135, 84, 0.1)' }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
     }
 
-    async function init() {
+    function resetDateInputs() {
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+    }
+
+    async function loadData() {
         try {
             const res = await fetch(API_URL + '?action=getAll');
             ALL_DATA = await res.json();
             renderAll();
-        } catch (e) { console.log("Offline mode"); }
+        } catch (e) { console.error("Error loading data"); }
     }
-    window.onload = init;
+
+    window.onload = () => {
+        resetDateInputs();
+        loadData();
+        if(syncQueue.length > 0) processSync();
+    };
 </script>
 </body>
 </html>

@@ -220,13 +220,14 @@
 <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxKNG76AfE40gWjVzbRteqss17Vy1Ud3TK7sbCGToc0ZLugF6VsXFj1YerGntaJv2Kdag/exec';
     
-    async function handleWithdraw(event) {
-        event.preventDefault();
+async function handleWithdraw(event) {
+        if (event) event.preventDefault(); // ป้องกันหน้าเว็บรีโหลด
 
         const btn = document.getElementById('btnExp');
         const fileInput = document.getElementById('exp_file');
         const file = fileInput.files[0];
 
+        // ดึงข้อมูลจากฟอร์ม
         const expData = {
             date: document.getElementById('exp_date').value,
             name: document.getElementById('exp_name').value,
@@ -239,10 +240,13 @@
             return;
         }
 
+        // --- เริ่มขั้นตอนการส่งข้อมูล ---
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งข้อมูล...';
+        // เปลี่ยนข้อความปุ่มเพื่อแจ้งว่ากำลังอัปโหลดรูป
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลดรูป...';
 
         try {
+            // 1. แปลงไฟล์รูปภาพเป็น Base64
             const base64 = await toBase64(file);
             const filePayload = {
                 base64: base64.split(',')[1],
@@ -250,9 +254,13 @@
                 fileName: "Withdraw_" + expData.name + "_" + Date.now()
             };
 
+            // 2. เรียกฟังก์ชันอัปโหลดรูปภาพที่ Google Drive
             google.script.run
                 .withSuccessHandler(function(imgRes) {
                     if (imgRes.status === 'success') {
+                        
+                        // เมื่ออัปโหลดรูปเสร็จแล้ว ให้เปลี่ยนข้อความปุ่มเพื่อแจ้งว่ากำลังบันทึกข้อมูลลง Sheet
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>📝 กำลังบันทึกข้อมูล...';
 
                         const syncPayload = [{
                             sheetName: 'Expense',
@@ -262,10 +270,11 @@
                                 expData.name,
                                 expData.amount,
                                 expData.desc,
-                                imgRes.url
+                                imgRes.url // ลิงก์รูปภาพที่ได้จาก Drive
                             ]
                         }];
 
+                        // 3. บันทึกข้อมูลลง Google Sheet
                         google.script.run
                             .withSuccessHandler(function(res) {
                                 btn.disabled = false;
@@ -273,11 +282,21 @@
                                 
                                 if(res.status === 'success') {
                                     alert("✅ ส่งข้อมูลและอัปโหลดสลิปเรียบร้อยแล้ว!");
-                                    document.querySelector('form').reset();
-                                    if(typeof loadData === "function") loadData();
+                                    document.querySelector('form').reset(); // ล้างข้อมูลในฟอร์ม
+                                    
+                                    // รีเซ็ตวันที่เป็นวันนี้อีกครั้งหลังล้างฟอร์ม
+                                    const dateInput = document.getElementById('exp_date');
+                                    if(dateInput) dateInput.valueAsDate = new Date();
+                                    
+                                    if(typeof loadData === "function") loadData(); // โหลดข้อมูลใหม่ถ้ามีฟังก์ชันนี้
                                 } else {
                                     alert("❌ บันทึกข้อมูลลง Sheet ไม่สำเร็จ: " + res.message);
                                 }
+                            })
+                            .withFailureHandler(function(err) {
+                                btn.disabled = false;
+                                btn.innerText = "ส่งคำขอเบิกเงิน";
+                                alert("❌ เกิดข้อผิดพลาดที่ Sheet: " + err.message);
                             })
                             .processSyncQueue(syncPayload);
 
@@ -287,12 +306,17 @@
                         alert("❌ อัปโหลดรูปภาพไม่สำเร็จ: " + imgRes.message);
                     }
                 })
+                .withFailureHandler(function(err) {
+                    btn.disabled = false;
+                    btn.innerText = "ส่งคำขอเบิกเงิน";
+                    alert("❌ เกิดข้อผิดพลาดที่ Drive: " + err.message);
+                })
                 .uploadFileDirect(filePayload);
 
         } catch (err) {
             btn.disabled = false;
             btn.innerText = "ส่งคำขอเบิกเงิน";
-            alert("❌ เกิดข้อผิดพลาด: " + err.toString());
+            alert("❌ ระบบขัดข้อง: " + err.toString());
         }
     }
 

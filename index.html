@@ -217,7 +217,7 @@
 </div>
 
 <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbw0pVVdNkVH-Az6AVJsRWzsXrN0mKcWFl9aV8CKg_dyZxI5BWe_KqVcbC4aEjAj3frj8Q/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbw0pVVdNkVH-Az6AVJsRWzsXrN0mKcWFl9aV8CKg_dyZxI5BWe_KqVcbC4aEjAj3frj8Q/exec?action=getAll';
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
@@ -340,7 +340,7 @@
         try {
             const base64 = await compressImage(input.files[0]);
             const payload = { action: 'uploadImage', payload: { base64: base64, mimeType: 'image/jpeg', fileName: `Slip_${Date.now()}.jpg` } };
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
             const data = await res.json();
             if(data.status === 'success') {
                 document.getElementById('exp_url').value = data.url; Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสลิปสำเร็จ!', showConfirmButton: false, timer: 1500});

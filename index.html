@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Saengthong Vitthaya Marching Band</title>
     
+    <!-- ฝัง Manifest.json อัตโนมัติ (ใส่ลิงก์รูปโลโก้จาก GitHub ของคุณแล้ว) -->
+    <meta name="theme-color" content="#003366">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBAND.png">
+    <script>
+        const manifestJSON = {
+            "name": "วงโยธวาธิต ST",
+            "short_name": "วงโยฯ ST",
+            "description": "ระบบบริหารจัดการวงโยธวาธิตโรงเรียนแสงทอง (Online)",
+            "start_url": window.location.href,
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#003366",
+            "icons": [
+                {"src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBAND.png", "sizes": "192x192", "type": "image/png"},
+                {"src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBAND.png", "sizes": "512x512", "type": "image/png"}
+            ]
+        };
+        const manifestData = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestJSON));
+        document.write(`<link rel="manifest" href="${manifestData}">`);
+    </script>
+
     <!-- CSS & Libraries -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,7 +41,7 @@
         :root { --navy: #002D62; --blue-light: #E3F2FD; --gray-bg: #f8f9fa; }
         body { font-family: 'Prompt', sans-serif; background-color: var(--gray-bg); color: #333; font-size: 0.95rem; overflow-x: hidden; }
         
-        /* Loading Screen */
+        /* Loading Screen - จะเปิดค้างไว้จนกว่าข้อมูลจะโหลดเสร็จ */
         #mainLoader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #ffffff; z-index: 99999;
@@ -73,10 +94,11 @@
 </head>
 <body>
 
-<!-- หน้าจอ Loading ก่อนข้อมูลมา -->
+<!-- Loading Screen -->
 <div id="mainLoader">
+    <img src="https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBAND.png" alt="Logo" style="height: 80px; margin-bottom: 20px;">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    <h5 class="mt-3 fw-bold" style="color: var(--navy);">กำลังดึงข้อมูล...</h5>
+    <h5 class="mt-3 fw-bold" style="color: var(--navy);">กำลังดึงข้อมูล... กรุณารอสักครู่</h5>
 </div>
 
 <div id="syncToast"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูล...</div>
@@ -84,8 +106,8 @@
 <nav class="navbar navbar-expand-lg navbar-st py-2 py-md-3 mb-3 mb-md-4">
     <div class="container-fluid container-md d-flex justify-content-between align-items-center">
         <a class="navbar-brand d-flex align-items-center" href="#">
-            <!-- 🔴 ดึงรูปโลโก้จากไฟล์ในโฟลเดอร์ icons ของโปรเจกต์ 🔴 -->
-            <img src="icons/STBAND.png" alt="Logo" style="height: 32px; width: auto; margin-right: 10px; border-radius: 4px;">
+            <!-- โลโก้ใน Navbar จาก GitHub ของคุณ -->
+            <img src="https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBAND.png" alt="Logo" style="height: 32px; width: auto; margin-right: 10px;">
             <span class="d-none d-sm-inline">Saengthong Vitthaya Marching Band</span>
             <span class="d-inline d-sm-none fs-6">ST BAND MGMT</span>
         </a>
@@ -96,7 +118,7 @@
 </nav>
 
 <div class="container-fluid container-md pb-5">
-    <!-- เมนู Tabs (ระบบสลับหน้าแบบ Custom JS) -->
+    <!-- เมนู Tabs -->
     <div class="nav nav-pills mb-3 overflow-auto flex-nowrap" id="mainTab">
         <button class="nav-link active" onclick="switchTab('pane-late', this)">มาสาย</button>
         <button class="nav-link" onclick="switchTab('pane-weekly', this)">สถิติสัปดาห์</button>
@@ -229,7 +251,7 @@
 </div>
 
 <script>
-    // 🔴🔴 ใส่ URL WEB APP ของคุณที่นี่ (ของ Google Apps Script) 🔴🔴
+    // 🔴🔴 ใส่ URL WEB APP ล่าสุดของคุณที่นี่ 🔴🔴
     const API_URL = 'https://script.google.com/macros/s/AKfycbx_rGa0arDoxbbfj0MTRgUMdIIEi-QI2nDdHpvWT-XUv8WIlDhU1ASrR5gNiyTTzBEtog/exec'; 
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
@@ -237,11 +259,10 @@
     let tsStudentInstances = [];
     let tsInstInstances = [];
 
-    // --- ระบบสลับแท็บ ---
+    // --- ระบบสลับแท็บแบบเขียนเอง ---
     function switchTab(targetId, btn) {
         document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-        
         document.getElementById(targetId).classList.add('active');
         btn.classList.add('active');
     }
@@ -266,10 +287,21 @@
         }
     }
 
-    // --- Tom Select Dropdown ---
+    // --- การสร้าง Dropdown (ทำหลังจากข้อมูลโหลดเสร็จแล้วเท่านั้น) ---
     function initTomSelect() {
+        // ล้างของเก่าทิ้ง (ถ้ามี)
+        tsStudentInstances.forEach(ts => ts.destroy());
+        tsInstInstances.forEach(ts => ts.destroy());
+        tsStudentInstances = [];
+        tsInstInstances = [];
+
+        // ดึงข้อมูลชื่อและเครื่องดนตรีล่าสุดมาเตรียมไว้
+        const stdOptions = (ALL_DATA.students || []).map(s => ({value: s.name, text: s.name}));
+        const instOptions = (ALL_DATA.instruments || []).map(i => ({value: i.instrument, text: i.instrument}));
+
         document.querySelectorAll('.student-dropdown').forEach(el => {
             let ts = new TomSelect(el, {
+                options: stdOptions, // ใส่ข้อมูลลงไปทันทีตอนสร้าง
                 create: function(input) {
                     if(!ALL_DATA.students) ALL_DATA.students = [];
                     ALL_DATA.students.push({name: input});
@@ -284,6 +316,7 @@
 
         document.querySelectorAll('.inst-dropdown').forEach(el => {
             let ts = new TomSelect(el, {
+                options: instOptions, // ใส่ข้อมูลลงไปทันทีตอนสร้าง
                 create: function(input) {
                     if(!ALL_DATA.instruments) ALL_DATA.instruments = [];
                     ALL_DATA.instruments.push({instrument: input});
@@ -297,6 +330,7 @@
         });
     }
 
+    // --- อัปเดต Dropdown กรณีมีการเพิ่มชื่อใหม่เข้ามา ---
     function updateDropdowns() {
         const stdOptions = (ALL_DATA.students || []).map(s => ({value: s.name, text: s.name}));
         tsStudentInstances.forEach(ts => {
@@ -311,7 +345,7 @@
 
     function checkOther(sel) { document.getElementById('abs_other').style.display = (sel.value==='อื่นๆ') ? 'block' : 'none'; }
 
-    // --- Sync ข้อมูล ---
+    // --- ระบบ Sync ข้อมูล ---
     function addToQueue(item) { 
         syncQueue.push(item); 
         localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
@@ -340,7 +374,6 @@
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- อัปโหลดรูป ---
     async function compressImage(file, maxWidth = 1000) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -390,7 +423,6 @@
         } finally { btn.disabled = false; btn.innerHTML = oldText; }
     }
 
-    // --- จัดการฟอร์ม ---
     function handleForm(e, sheet, fids) {
         e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
         fids.forEach(fid => {
@@ -460,7 +492,6 @@
         });
     }
 
-    // --- Render ทุกอย่าง ---
     function renderAll() {
         if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>'; }
 
@@ -529,25 +560,28 @@
         document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="fw-bold text-start">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
     }
 
+    // --- โหลดข้อมูล 100% ให้เสร็จก่อนสร้าง Dropdown ---
     async function init() {
-        initTomSelect(); 
         try { 
             const res = await fetch(API_URL + '?action=getAll'); 
             const fetchedData = await res.json(); 
             ALL_DATA = { ...ALL_DATA, ...fetchedData }; 
-            updateDropdowns(); 
+            
+            // เมื่อดึงข้อมูลเสร็จค่อยสร้างและใส่ข้อมูลลง Dropdown
+            initTomSelect(); 
             renderAll(); 
+            
+            // ดึงเสร็จแล้วก็ปิดหน้า Loading ได้เลย
+            document.getElementById('mainLoader').style.display = 'none';
         } catch(e) { 
             console.error("Initial load failed"); 
             Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'กรุณารีเฟรชหน้าเว็บอีกครั้ง', icon: 'error'});
-        } finally {
-            document.getElementById('mainLoader').style.display = 'none';
         }
     }
     
     window.onload = () => { 
         document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]);
-        init(); 
+        init(); // สั่งรันฟังก์ชันดึงข้อมูลทันทีที่เปิดเว็บ
         if(syncQueue.length > 0) processSync(); 
     };
 </script>

@@ -110,7 +110,7 @@
     </div>
 
     <div class="tab-content">
-        <!-- Pane Content Same as Before... -->
+        
         <div class="tab-pane active" id="pane-late">
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
@@ -214,93 +214,106 @@
         <div class="tab-pane" id="pane-stat">
             <div class="card p-3 p-md-4"><h5 class="card-title text-center mb-3"><i class="fas fa-chart-bar me-2"></i>สรุปสถิติรายบุคคล</h5><div class="table-responsive"><table class="table table-bordered text-center align-middle" id="tableTotal"><thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr></thead><tbody></tbody></table></div></div>
         </div>
+        
     </div>
 </div>
 
 <script>
+    // 🚩 URL ของ Apps Script ปัจจุบัน (ถ้ามีการแก้ Code.gs แล้ว Deploy ใหม่ อย่าลืมเอาลิงก์ใหม่มาใส่นะครับ)
     const API_URL = 'https://script.google.com/macros/s/AKfycbx9YBmh1nXPHMTv681tvs6pBlp9WCVQ-Zr8vzhTJjccFo9UtCK4zfF4f4cIpK9unavLgA/exec';
-    
-    async function handleWithdraw(event) {
-            event.preventDefault();
-            const btn = document.getElementById('btnExp');
-            const fileInput = document.getElementById('exp_file');
-            const file = fileInput.files[0];
-    
-            // ดึงค่าตาม ID ในฟอร์มของคุณ
-            const date = document.getElementById('exp_date').value;
-            const name = document.getElementById('exp_name').value;
-            const amount = document.getElementById('exp_amt').value; // ตรวจสอบว่าใน HTML ใช้ id="exp_amt" หรือ "exp_amount"
-            const desc = document.getElementById('exp_desc').value;
-    
-            if (!file) return alert("⚠️ กรุณาเลือกรูปภาพสลิปครับ");
-    
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลดรูป...';
-    
-            try {
-                const base64Data = await toBase64(file);
-                const filePayload = {
-                    base64: base64Data.split(',')[1],
-                    mimeType: file.type,
-                    fileName: "Slip_" + name + "_" + Date.now()
-                };
-    
-                // จังหวะที่ 1: อัปโหลดรูป
-                google.script.run
-                    .withSuccessHandler(function(imgRes) {
-                        if (imgRes.status === 'success') {
-                            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>📝 กำลังบันทึกข้อมูล...';
-                            
-                            // จังหวะที่ 2: บันทึกข้อมูล
-                            const syncPayload = [{
-                                sheetName: 'Expense',
-                                type: 'add',
-                                values: [date, name, amount, desc, imgRes.url]
-                            }];
-    
-                            google.script.run
-                                .withSuccessHandler(function(res) {
-                                    btn.disabled = false;
-                                    btn.innerText = "ส่งคำขอเบิกเงิน";
-                                    if(res.status === 'success') {
-                                        alert("✅ สำเร็จ! ข้อมูลและสลิปถูกบันทึกแล้ว");
-                                        document.querySelector('form').reset();
-                                    } else {
-                                        alert("❌ พังตอนลง Sheet: " + res.message);
-                                    }
-                                })
-                                .processSyncQueue(syncPayload);
-                        } else {
-                            alert("❌ พังตอนอัปโหลดรูป: " + imgRes.message);
-                            btn.disabled = false;
-                            btn.innerText = "ส่งคำขอเบิกเงิน";
-                        }
-                    })
-                    .uploadFileDirect(filePayload);
-            } catch (err) {
-                alert("❌ ระบบขัดข้อง: " + err.toString());
-                btn.disabled = false;
-                btn.innerText = "ส่งคำขอเบิกเงิน";
-            }
-        }
-    
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const dateInput = document.getElementById('exp_date');
-            if(dateInput) dateInput.valueAsDate = new Date();
-        });
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
     let tsStudentInstances = [];
     let tsInstInstances = [];
 
+    // --- ฟังก์ชันหลักสำหรับการเบิกเงิน (รวม Upload ภาพ + ระบบคิวซิงค์ของคุณไว้ด้วยกัน) ---
+    async function handleWithdraw(event) {
+        event.preventDefault();
+        
+        const btn = document.getElementById('btnExp');
+        const fileInput = document.getElementById('exp_file');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            Swal.fire({icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกไฟล์รูปภาพสลิปก่อนกดส่งครับ'});
+            return;
+        }
+
+        const expData = {
+            date: document.getElementById('exp_date').value,
+            name: document.getElementById('exp_name').value,
+            amount: document.getElementById('exp_amt').value,
+            desc: document.getElementById('exp_desc').value
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลด...';
+
+        try {
+            // บีบอัดภาพด้วยฟังก์ชัน compressImage เดิมของคุณ เพื่อลดขนาดไฟล์
+            const base64Str = await compressImage(file);
+            const base64Data = base64Str.split(',')[1];
+            
+            const payload = { 
+                action: 'uploadImage', 
+                payload: { 
+                    base64: base64Data, 
+                    mimeType: 'image/jpeg', 
+                    fileName: "Slip_" + expData.name + "_" + Date.now() + ".jpg" 
+                } 
+            };
+
+            // ส่งข้อมูลรูปภาพไปที่ Code.gs ผ่าน fetch (ตามโครงสร้าง API เดิมของคุณ)
+            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
+            const data = await res.json();
+
+            if(data.status === 'success') {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>📝 กำลังบันทึกข้อมูล...';
+                
+                // นำข้อมูลเข้าสู่ระบบ UI ของคุณ
+                const id = Date.now();
+                const vals = [id, expData.date, expData.name, expData.amount, expData.desc, data.url, 'pending'];
+                ALL_DATA.expense.push({ id, date:vals[1], name:vals[2], amount:vals[3], desc:vals[4], slipUrl:vals[5], status:'pending' });
+                
+                renderAll(); 
+                document.querySelector('form').reset();
+                document.getElementById('exp_date').valueAsDate = new Date();
+                
+                // ส่งข้อมูลเข้าสู่ระบบคิวออฟไลน์ (syncQueue) เพื่อบันทึกลง Google Sheet
+                addToQueue({ type:'add', sheetName:'Expense', values:vals });
+                
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'ส่งคำขอเบิกเงินสำเร็จ!', showConfirmButton: false, timer: 1500});
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (err) {
+            Swal.fire({ title: 'เกิดข้อผิดพลาด', text: "ระบบขัดข้อง: " + err.toString(), icon: 'error' });
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "ส่งคำขอเบิกเงิน";
+        }
+    }
+
+    // --- ฟังก์ชันช่วยเหลือ (ทำงานร่วมกับ handleWithdraw) ---
+    async function compressImage(file, maxWidth = 1000) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader(); 
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image(); img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); let width = img.width, height = img.height;
+                    if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+                    canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7)); // แปลงเป็น JPG เพื่อประหยัดพื้นที่
+                };
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // --- ส่วนการจัดการ UI ทั่วไป ---
     function switchTab(targetId, btn) {
         document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -327,10 +340,7 @@
             if (password) {
                 Swal.fire({ title: 'กำลังตรวจสอบ...', didOpen: () => Swal.showLoading() });
                 try {
-                    const res = await fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'verifyAdmin', password: password })
-                    });
+                    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'verifyAdmin', password: password }) });
                     const data = await res.json();
                     if (data.status === 'success') {
                         localStorage.setItem('st_adm_on', 'true');
@@ -348,6 +358,7 @@
         }
     }
 
+    // --- ระบบซิงค์ข้อมูล (TomSelect + Queue) ---
     function initTomSelect() {
         tsStudentInstances.forEach(ts => ts.destroy());
         tsInstInstances.forEach(ts => ts.destroy());
@@ -380,7 +391,12 @@
     }
 
     function checkOther(sel) { document.getElementById('abs_other').style.display = (sel.value==='อื่นๆ') ? 'block' : 'none'; }
-    function addToQueue(item) { syncQueue.push(item); localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); processSync(); }
+    
+    function addToQueue(item) { 
+        syncQueue.push(item); 
+        localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
+        processSync(); 
+    }
     
     async function processSync() {
         if(syncQueue.length === 0) return;
@@ -391,41 +407,14 @@
             const data = await res.json();
             if(data.status === 'error') throw new Error(data.message);
             localStorage.removeItem('st_sync_queue');
-        } catch(e) { syncQueue = [...batch, ...syncQueue]; localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); }
+        } catch(e) { 
+            syncQueue = [...batch, ...syncQueue]; 
+            localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
+        }
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    async function compressImage(file, maxWidth = 1000) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image(); img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas'); let width = img.width, height = img.height;
-                    if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-                    canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7));
-                };
-            };
-        });
-    }
-
-    async function uploadImage(input) {
-        if(!input.files[0]) return;
-        const btn = document.getElementById('btnExp'); const oldText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปโหลด...';
-        try {
-            const base64 = await compressImage(input.files[0]);
-            const payload = { action: 'uploadImage', payload: { base64: base64, mimeType: 'image/jpeg', fileName: `Slip_${Date.now()}.jpg` } };
-            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
-            const data = await res.json();
-            if(data.status === 'success') {
-                document.getElementById('exp_url').value = data.url; Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสลิปสำเร็จ!', showConfirmButton: false, timer: 1500});
-            } else { throw new Error(data.message); }
-        } catch (e) { Swal.fire({ title: 'อัปโหลดล้มเหลว', text: "เช็คสิทธิ์ Apps Script เป็น Everyone หรือยัง?", icon: 'error' }); input.value = ""; }
-        finally { btn.disabled = false; btn.innerHTML = oldText; }
-    }
-
+    // --- ส่วนบันทึกข้อมูลฟอร์มอื่นๆ ---
     function handleForm(e, sheet, fids) {
         e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
         fids.forEach(fid => {
@@ -446,13 +435,7 @@
         addToQueue({ type:'add', sheetName:'Income', values:vals });
     }
 
-    function handleWithdraw(e) {
-        e.preventDefault(); const id = Date.now();
-        const vals = [id, document.getElementById('exp_date').value, document.getElementById('exp_name').value, document.getElementById('exp_amt').value, document.getElementById('exp_desc').value, document.getElementById('exp_url').value, 'pending'];
-        ALL_DATA.expense.push({ id, date:vals[1], name:vals[2], amount:vals[3], desc:vals[4], slipUrl:vals[5], status:'pending' }); renderAll(); e.target.reset();
-        addToQueue({ type:'add', sheetName:'Expense', values:vals });
-    }
-
+    // --- ส่วนแสดงผลตารางและการคำนวณ ---
     function formatThaiDate(dateStr) { if(!dateStr) return "-"; return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateStr)).replace("พุทธศักราช ", ""); }
     function makeEditable(el, sheet, id, col) { if(!isAdm()) return; const old = el.innerText; el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')"><i class="fas fa-check"></i></button></div>`; el.ondblclick = null; }
     function saveEdit(btn, sheet, id, col) { const val = btn.previousElementSibling.value; const td = btn.closest('td'); td.innerText = val; td.ondblclick = () => makeEditable(td, sheet, id, col); const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) item[col] = val; addToQueue({ type:'update', sheetName:sheet, id, columnName:col, newValue:val }); }
@@ -465,8 +448,10 @@
         document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['mins', 'note']);
         document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail']);
         document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note']);
+        
         const fR = [...(ALL_DATA.income || []).map(i => ({...i, sheet: 'Income', act: 'รายรับ', col: 'success'})), ...(ALL_DATA.expense || []).map(e => ({...e, sheet: 'Expense', act: 'เบิกเงิน', col: 'danger'}))].sort((a,b) => new Date(a.date) - new Date(b.date));
         document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${r.status==='pending'?'bg-light text-dark':'bg-success text-white'}">${r.status==='pending'?'รอตรวจ':'อนุมัติ'}</span></td><td class="admin-only"><button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        
         renderWeekly(); calculateFinance(); renderStats();
     }
 
@@ -475,27 +460,38 @@
         (ALL_DATA.late || []).forEach(r => { const d = new Date(r.date); if(d >= sW) { const n = r.name; const x = (d.getDay() || 7) - 1; if(!w[n]) w[n] = [0,0,0,0,0,0,0]; w[n][x]++; }});
         document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(w).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td>${w[n].map(c => `<td>${c||'-'}</td>`).join('')}<td class="fw-bold text-danger">${w[n].reduce((a,b)=>a+b,0)}</td></tr>`).join('');
     }
+    
     function calculateFinance() {
         let inc = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0);
         let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
         document.getElementById('f-in').innerText = '฿'+inc.toLocaleString(); document.getElementById('f-out').innerText = '฿'+exp.toLocaleString(); document.getElementById('f-bal').innerText = '฿'+(inc-exp).toLocaleString();
     }
+    
     function renderStats() {
         const s = {}; const add = (l, k) => (l || []).forEach(r => { const n = r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][k]++; });
         add(ALL_DATA.late, 'l'); add(ALL_DATA.misconduct, 'm'); add(ALL_DATA.absent, 'a');
         document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="fw-bold text-start">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
     }
 
+    // --- เริ่มต้นการทำงาน (Initialization) ---
     async function init() {
         try {
             const res = await fetch(API_URL + '?action=getAll');
             const data = await res.json();
             ALL_DATA = { ...ALL_DATA, ...data };
             initTomSelect(); renderAll();
-        } catch(e) { Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); }
-        finally { document.getElementById('mainLoader').style.display = 'none'; }
+        } catch(e) { 
+            Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); 
+        } finally { 
+            document.getElementById('mainLoader').style.display = 'none'; 
+        }
     }
-    window.onload = () => { document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]); init(); if(syncQueue.length > 0) processSync(); };
+    
+    window.onload = () => { 
+        document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]); 
+        init(); 
+        if(syncQueue.length > 0) processSync(); 
+    };
 </script>
 </body>
 </html>

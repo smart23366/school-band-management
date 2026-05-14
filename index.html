@@ -219,7 +219,7 @@
 </div>
 
 <script>
-    // 🚩 URL ของ Apps Script ปัจจุบัน (ถ้ามีการแก้ Code.gs แล้ว Deploy ใหม่ อย่าลืมเอาลิงก์ใหม่มาใส่นะครับ)
+
     const API_URL = 'https://script.google.com/macros/s/AKfycbx9YBmh1nXPHMTv681tvs6pBlp9WCVQ-Zr8vzhTJjccFo9UtCK4zfF4f4cIpK9unavLgA/exec';
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
@@ -227,16 +227,15 @@
     let tsStudentInstances = [];
     let tsInstInstances = [];
 
-    // --- ฟังก์ชันหลักสำหรับการเบิกเงิน (รวม Upload ภาพ + ระบบคิวซิงค์ของคุณไว้ด้วยกัน) ---
+    // 👇👇👇 1. วางฟังก์ชัน handleWithdraw ใหม่ตรงนี้เลยครับ 👇👇👇
     async function handleWithdraw(event) {
         event.preventDefault();
-        
         const btn = document.getElementById('btnExp');
         const fileInput = document.getElementById('exp_file');
         const file = fileInput.files[0];
 
         if (!file) {
-            Swal.fire({icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกไฟล์รูปภาพสลิปก่อนกดส่งครับ'});
+            Swal.fire({icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกไฟล์รูปภาพสลิปก่อนครับ'});
             return;
         }
 
@@ -251,7 +250,7 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลด...';
 
         try {
-            // บีบอัดภาพด้วยฟังก์ชัน compressImage เดิมของคุณ เพื่อลดขนาดไฟล์
+            // บีบอัดภาพก่อนส่ง
             const base64Str = await compressImage(file);
             const base64Data = base64Str.split(',')[1];
             
@@ -264,26 +263,27 @@
                 } 
             };
 
-            // ส่งข้อมูลรูปภาพไปที่ Code.gs ผ่าน fetch (ตามโครงสร้าง API เดิมของคุณ)
-            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
+            // ส่งรูปไปที่ Apps Script
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
 
             if(data.status === 'success') {
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>📝 กำลังบันทึกข้อมูล...';
+                btn.innerHTML = '📝 กำลังบันทึกข้อมูล...';
                 
-                // นำข้อมูลเข้าสู่ระบบ UI ของคุณ
+                // เมื่อรูปสำเร็จ เตรียมข้อมูลลงตาราง
                 const id = Date.now();
                 const vals = [id, expData.date, expData.name, expData.amount, expData.desc, data.url, 'pending'];
+                
+                // อัปเดตตารางหน้าเว็บ
                 ALL_DATA.expense.push({ id, date:vals[1], name:vals[2], amount:vals[3], desc:vals[4], slipUrl:vals[5], status:'pending' });
-                
                 renderAll(); 
-                document.querySelector('form').reset();
-                document.getElementById('exp_date').valueAsDate = new Date();
                 
-                // ส่งข้อมูลเข้าสู่ระบบคิวออฟไลน์ (syncQueue) เพื่อบันทึกลง Google Sheet
+                // ส่งข้อมูลเข้าคิวซิงค์ (ลง Sheet)
                 addToQueue({ type:'add', sheetName:'Expense', values:vals });
                 
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'ส่งคำขอเบิกเงินสำเร็จ!', showConfirmButton: false, timer: 1500});
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'สำเร็จ! ข้อมูลและรูปถูกบันทึกแล้ว', showConfirmButton: false, timer: 2000});
+                document.querySelector('#pane-finance form').reset();
+                document.getElementById('exp_date').valueAsDate = new Date();
             } else {
                 throw new Error(data.message);
             }

@@ -220,6 +220,94 @@
 <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxKNG76AfE40gWjVzbRteqss17Vy1Ud3TK7sbCGToc0ZLugF6VsXFj1YerGntaJv2Kdag/exec';
     
+    async function handleWithdraw(event) {
+        event.preventDefault();
+
+        const btn = document.getElementById('btnExp');
+        const fileInput = document.getElementById('exp_file');
+        const file = fileInput.files[0];
+
+        const expData = {
+            date: document.getElementById('exp_date').value,
+            name: document.getElementById('exp_name').value,
+            amount: document.getElementById('exp_amt').value,
+            desc: document.getElementById('exp_desc').value
+        };
+
+        if (!file) {
+            alert("⚠️ กรุณาอัปโหลดรูปภาพสลิปด้วยครับ");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งข้อมูล...';
+
+        try {
+            const base64 = await toBase64(file);
+            const filePayload = {
+                base64: base64.split(',')[1],
+                mimeType: file.type,
+                fileName: "Withdraw_" + expData.name + "_" + Date.now()
+            };
+
+            google.script.run
+                .withSuccessHandler(function(imgRes) {
+                    if (imgRes.status === 'success') {
+
+                        const syncPayload = [{
+                            sheetName: 'Expense',
+                            type: 'add',
+                            values: [
+                                expData.date,
+                                expData.name,
+                                expData.amount,
+                                expData.desc,
+                                imgRes.url
+                            ]
+                        }];
+
+                        google.script.run
+                            .withSuccessHandler(function(res) {
+                                btn.disabled = false;
+                                btn.innerText = "ส่งคำขอเบิกเงิน";
+                                
+                                if(res.status === 'success') {
+                                    alert("✅ ส่งข้อมูลและอัปโหลดสลิปเรียบร้อยแล้ว!");
+                                    document.querySelector('form').reset();
+                                    if(typeof loadData === "function") loadData();
+                                } else {
+                                    alert("❌ บันทึกข้อมูลลง Sheet ไม่สำเร็จ: " + res.message);
+                                }
+                            })
+                            .processSyncQueue(syncPayload);
+
+                    } else {
+                        btn.disabled = false;
+                        btn.innerText = "ส่งคำขอเบิกเงิน";
+                        alert("❌ อัปโหลดรูปภาพไม่สำเร็จ: " + imgRes.message);
+                    }
+                })
+                .uploadFileDirect(filePayload);
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerText = "ส่งคำขอเบิกเงิน";
+            alert("❌ เกิดข้อผิดพลาด: " + err.toString());
+        }
+    }
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dateInput = document.getElementById('exp_date');
+        if(dateInput) dateInput.valueAsDate = new Date();
+    });
+    
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
     let tsStudentInstances = [];

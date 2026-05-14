@@ -137,16 +137,19 @@
         <div class="tab-pane" id="pane-misc">
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
-                    <div class="card p-3 p-md-4 border-top border-danger border-4">
-                        <h5 class="card-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>บันทึกผิดวินัย</h5>
-                        <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_role', 'misc_type', 'misc_level', 'misc_detail'])">
-                            <input type="date" id="misc_date" class="form-control mb-2" required>
-                            <div class="mb-2"><select id="misc_name" class="student-dropdown" required placeholder="🔍 ค้นหาชื่อนักเรียน..."></select></div>
-                            <div class="mb-2"><select id="misc_role" class="inst-dropdown" required placeholder="🔍 ค้นหาเครื่องดนตรี..."></select></div>
-                            <select id="misc_type" class="form-select mb-2" required><option value="" disabled selected>เลือกประเภทความผิด</option><option value="พฤติกรรมไม่เหมาะสม">พฤติกรรมไม่เหมาะสม</option><option value="ไม่ปฏิบัติตามคำสั่ง">ไม่ปฏิบัติตามคำสั่ง</option><option value="เล่นโทรศัพท์">เล่นโทรศัพท์</option><option value="อื่นๆ">อื่นๆ</option></select>
-                            <select id="misc_level" class="form-select mb-2" required><option value="เบา">ระดับ: เบา</option><option value="ปานกลาง">ระดับ: ปานกลาง</option><option value="หนัก">ระดับ: หนัก</option></select>
-                            <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดเหตุการณ์" required></textarea>
-                            <button type="submit" class="btn btn-danger w-100 fw-bold">บันทึกความผิด</button>
+                    <div class="card p-3 p-md-4 border-top border-danger border-4 mb-3">
+                        <h5 class="card-title text-danger"><i class="fas fa-file-invoice-dollar me-2"></i>แจ้งเบิกเงิน</h5>
+                        <form onsubmit="handleWithdraw(event)">
+                            <input type="date" id="exp_date" class="form-control mb-2" required>
+                            <div class="mb-2"><select id="exp_name" class="student-dropdown" required placeholder="🔍 ค้นหาชื่อผู้เบิก..."></select></div>
+                            <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
+                            <input type="text" id="exp_desc" class="form-control mb-2" placeholder="เบิกไปทำอะไร?" required>
+                            
+                            <label class="small fw-bold text-muted mb-1">ลิงก์สลิปเงิน (อัปโหลดผ่าน LINE Bot แล้วนำลิงก์มาวาง):</label>
+
+                            <input type="url" id="exp_url" class="form-control mb-2" placeholder="วางลิงก์ที่ได้จาก LINE Bot ที่นี่" required>
+                            
+                            <button type="submit" id="btnExp" class="btn btn-danger w-100 mt-2 fw-bold">ส่งคำขอเบิกเงิน</button>
                         </form>
                     </div>
                 </div>

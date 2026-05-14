@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ST BAND MGMT - ระบบบริหารจัดการวง</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,51 +13,73 @@
 
     <style>
         :root { --navy: #002D62; --blue-light: #E3F2FD; --gray-bg: #f8f9fa; }
-        body { font-family: 'Prompt', sans-serif; background-color: var(--gray-bg); color: #333; }
-        .navbar-st { background-color: var(--navy); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .navbar-brand { color: white !important; font-weight: 700; font-size: 1.4rem; }
+        body { font-family: 'Prompt', sans-serif; background-color: var(--gray-bg); color: #333; font-size: 0.95rem; }
+        
+        /* Navbar */
+        .navbar-st { background-color: var(--navy); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .navbar-brand { color: white !important; font-weight: 700; font-size: 1.2rem; }
+        
+        /* Cards & Forms */
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card-title { color: var(--navy); border-bottom: 2px solid var(--blue-light); padding-bottom: 10px; font-weight: 600; }
+        .card-title { color: var(--navy); border-bottom: 2px solid var(--blue-light); padding-bottom: 10px; font-weight: 600; font-size: 1.1rem; }
+        .form-control, .form-select { border-radius: 8px; font-size: 0.95rem; }
+        
+        /* Buttons */
         .btn-navy { background-color: var(--navy); color: white; }
         .btn-navy:hover { background-color: #001a3a; color: white; }
         
+        /* Tabs */
         .nav-pills { background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .nav-pills .nav-link { color: var(--navy); font-weight: 500; border-radius: 8px; margin-right: 5px; }
+        .nav-pills .nav-link { color: var(--navy); font-weight: 500; border-radius: 8px; margin-right: 5px; white-space: nowrap; }
         .nav-pills .nav-link.active { background-color: var(--navy); color: white; }
 
+        /* Admin Rules */
         .admin-only { display: none !important; }
         .is-admin .admin-only { display: table-cell !important; } 
         div.admin-only.is-admin { display: block !important; }
         
+        /* Tables */
+        .table-responsive { border-radius: 8px; }
+        table thead tr { background-color: var(--navy); color: white; font-size: 0.9rem; }
+        table tbody tr td { font-size: 0.9rem; vertical-align: middle; }
         .editable { cursor: pointer; border-bottom: 1px dashed #ccc; }
         .editable:hover { background-color: var(--blue-light); }
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
-
-        .table-wrap { overflow-x: auto; }
-        table thead tr { background-color: var(--navy); color: white; }
-        table th { font-weight: 500; white-space: nowrap; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
         
-        .fin-box { border-radius: 12px; padding: 20px; color: white; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #syncToast { position: fixed; bottom: 20px; right: 20px; z-index: 1050; display: none; background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 0.9rem; }
+        /* Finance Boxes */
+        .fin-box { border-radius: 12px; padding: 15px; color: white; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .fin-box h3 { font-size: 1.5rem; margin-top: 5px; }
+        
+        /* Loading Sync */
+        #syncToast { position: fixed; bottom: 20px; right: 20px; z-index: 1050; display: none; background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+        /* Responsive Tweaks */
+        @media (max-width: 768px) {
+            .navbar-brand { font-size: 1rem; }
+            .card { padding: 15px !important; }
+            .fin-box h3 { font-size: 1.3rem; }
+            table th, table td { white-space: nowrap; } /* Make table scrollable without crushing text */
+        }
     </style>
 </head>
 <body>
 
-<div id="syncToast"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูลกับ Google Sheets...</div>
+<div id="syncToast"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูล...</div>
 
-<nav class="navbar navbar-expand-lg navbar-st py-3 mb-4">
-    <div class="container">
-        <a class="navbar-brand" href="#"><i class="fas fa-drum me-2"></i> ST BAND MGMT</a>
+<nav class="navbar navbar-expand-lg navbar-st py-2 py-md-3 mb-3 mb-md-4">
+    <div class="container-fluid container-md">
+        <a class="navbar-brand" href="#"><i class="fas fa-drum me-1"></i> ST BAND MGMT</a>
         <button class="btn btn-outline-light btn-sm fw-bold" onclick="toggleAdmin()" id="adminBtn">
-            <i class="fas fa-lock me-1"></i> เข้าสู่โหมด Admin
+            <i class="fas fa-lock"></i> <span class="d-none d-sm-inline ms-1">เข้าสู่โหมด Admin</span>
         </button>
     </div>
 </nav>
 
-<div class="container pb-5">
-    <ul class="nav nav-pills mb-4 overflow-auto flex-nowrap" id="mainTab" role="tablist">
+<div class="container-fluid container-md pb-5">
+    <!-- เมนู Tabs -->
+    <ul class="nav nav-pills mb-3 overflow-auto flex-nowrap" id="mainTab" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pane-late">มาสาย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-weekly">มาสายรายสัปดาห์</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-weekly">สถิติสัปดาห์</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-misc">ผิดวินัย</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-absent">ขาดซ้อม</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-finance">การเงิน</button></li>
@@ -67,32 +89,38 @@
     <div class="tab-content">
         <!-- ================== มาสาย ================== -->
         <div class="tab-pane fade show active" id="pane-late">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="card p-4">
+            <div class="row g-3">
+                <div class="col-12 col-lg-4">
+                    <div class="card p-3 p-md-4">
                         <h5 class="card-title"><i class="fas fa-clock me-2"></i>บันทึกมาสาย</h5>
                         <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_role', 'late_mins', 'late_note'])">
                             <input type="date" id="late_date" class="form-control mb-2" required>
+                            
+                            <!-- Searchable Dropdowns via Datalist -->
                             <div class="input-group mb-2">
-                                <select id="late_name" class="form-select student-dropdown" required><option value="" disabled selected>-- เลือกชื่อนักเรียน --</option></select>
-                                <button type="button" class="btn btn-outline-primary" onclick="promptNewStudent()"><i class="fas fa-plus"></i></button>
+                                <input type="text" id="late_name" list="studentList" class="form-control" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อ" autocomplete="off" required>
+                                <button type="button" class="btn btn-outline-primary" onclick="promptNewStudent()" title="เพิ่มชื่อใหม่"><i class="fas fa-plus"></i></button>
                             </div>
+                            
                             <div class="input-group mb-2">
-                                <select id="late_role" class="form-select inst-dropdown" required><option value="" disabled selected>-- เลือกเครื่องดนตรี --</option></select>
-                                <button type="button" class="btn btn-outline-primary" onclick="promptNewInst()"><i class="fas fa-plus"></i></button>
+                                <input type="text" id="late_role" list="instList" class="form-control" placeholder="🔍 ค้นหาเครื่องดนตรี" autocomplete="off" required>
+                                <button type="button" class="btn btn-outline-primary" onclick="promptNewInst()" title="เพิ่มเครื่องใหม่"><i class="fas fa-plus"></i></button>
                             </div>
+
                             <input type="number" id="late_mins" class="form-control mb-2" placeholder="สายกี่นาที?" required>
                             <textarea id="late_note" class="form-control mb-3" placeholder="เหตุผลที่สาย"></textarea>
-                            <button type="submit" class="btn btn-navy w-100">บันทึกข้อมูล</button>
+                            <button type="submit" class="btn btn-navy w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
-                <div class="col-lg-8">
-                    <div class="card p-3 table-wrap">
-                        <table class="table table-hover" id="tableLate">
-                            <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>สาย (นาที)</th><th>หมายเหตุ</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="col-12 col-lg-8">
+                    <div class="card p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableLate">
+                                <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>สาย (นาที)</th><th>หมายเหตุ</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -100,31 +128,33 @@
 
         <!-- ================== มาสายรายสัปดาห์ ================== -->
         <div class="tab-pane fade" id="pane-weekly">
-            <div class="card p-4 table-wrap">
-                <h5 class="card-title text-center mb-4"><i class="fas fa-calendar-week me-2"></i>สถิติมาสายประจำสัปดาห์นี้</h5>
-                <table class="table table-bordered text-center align-middle" id="tableWeekly">
-                    <thead class="table-light">
-                        <tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th class="table-danger">รวม</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="card p-3 p-md-4">
+                <h5 class="card-title text-center mb-3"><i class="fas fa-calendar-week me-2"></i>สถิติมาสายสัปดาห์นี้</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle" id="tableWeekly">
+                        <thead class="table-light">
+                            <tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th class="table-danger">รวม</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <!-- ================== ผิดวินัย ================== -->
         <div class="tab-pane fade" id="pane-misc">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="card p-4 border-top border-danger border-4">
+            <div class="row g-3">
+                <div class="col-12 col-lg-4">
+                    <div class="card p-3 p-md-4 border-top border-danger border-4">
                         <h5 class="card-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>บันทึกผิดวินัย</h5>
                         <form onsubmit="handleForm(event, 'Misconduct', ['misc_date', 'misc_name', 'misc_role', 'misc_type', 'misc_level', 'misc_detail'])">
                             <input type="date" id="misc_date" class="form-control mb-2" required>
                             <div class="input-group mb-2">
-                                <select id="misc_name" class="form-select student-dropdown" required><option value="" disabled selected>-- เลือกชื่อนักเรียน --</option></select>
+                                <input type="text" id="misc_name" list="studentList" class="form-control" placeholder="🔍 ค้นหาชื่อ" autocomplete="off" required>
                                 <button type="button" class="btn btn-outline-danger" onclick="promptNewStudent()"><i class="fas fa-plus"></i></button>
                             </div>
                             <div class="input-group mb-2">
-                                <select id="misc_role" class="form-select inst-dropdown" required><option value="" disabled selected>-- เลือกเครื่องดนตรี --</option></select>
+                                <input type="text" id="misc_role" list="instList" class="form-control" placeholder="🔍 ค้นหาเครื่อง" autocomplete="off" required>
                                 <button type="button" class="btn btn-outline-danger" onclick="promptNewInst()"><i class="fas fa-plus"></i></button>
                             </div>
                             <select id="misc_type" class="form-select mb-2" required>
@@ -140,16 +170,18 @@
                                 <option value="หนัก">ระดับ: หนัก</option>
                             </select>
                             <textarea id="misc_detail" class="form-control mb-3" placeholder="รายละเอียดเหตุการณ์" required></textarea>
-                            <button type="submit" class="btn btn-danger w-100">บันทึกความผิด</button>
+                            <button type="submit" class="btn btn-danger w-100 fw-bold">บันทึกความผิด</button>
                         </form>
                     </div>
                 </div>
-                <div class="col-lg-8">
-                    <div class="card p-3 table-wrap">
-                        <table class="table table-hover" id="tableMisc">
-                            <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>ประเภท</th><th>ระดับ</th><th>รายละเอียด</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="col-12 col-lg-8">
+                    <div class="card p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableMisc">
+                                <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>ประเภท</th><th>ระดับ</th><th>รายละเอียด</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,18 +189,18 @@
 
         <!-- ================== ขาดซ้อม ================== -->
         <div class="tab-pane fade" id="pane-absent">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="card p-4 border-top border-warning border-4">
+            <div class="row g-3">
+                <div class="col-12 col-lg-4">
+                    <div class="card p-3 p-md-4 border-top border-warning border-4">
                         <h5 class="card-title text-warning"><i class="fas fa-user-times me-2"></i>บันทึกขาดซ้อม</h5>
                         <form onsubmit="handleForm(event, 'Absent', ['abs_date', 'abs_name', 'abs_role', 'abs_type', 'abs_note'])">
                             <input type="date" id="abs_date" class="form-control mb-2" required>
                             <div class="input-group mb-2">
-                                <select id="abs_name" class="form-select student-dropdown" required><option value="" disabled selected>-- เลือกชื่อนักเรียน --</option></select>
+                                <input type="text" id="abs_name" list="studentList" class="form-control" placeholder="🔍 ค้นหาชื่อ" autocomplete="off" required>
                                 <button type="button" class="btn btn-outline-warning text-dark" onclick="promptNewStudent()"><i class="fas fa-plus"></i></button>
                             </div>
                             <div class="input-group mb-2">
-                                <select id="abs_role" class="form-select inst-dropdown" required><option value="" disabled selected>-- เลือกเครื่องดนตรี --</option></select>
+                                <input type="text" id="abs_role" list="instList" class="form-control" placeholder="🔍 ค้นหาเครื่อง" autocomplete="off" required>
                                 <button type="button" class="btn btn-outline-warning text-dark" onclick="promptNewInst()"><i class="fas fa-plus"></i></button>
                             </div>
                             <select id="abs_type" class="form-select mb-2" onchange="checkOther(this)">
@@ -184,12 +216,14 @@
                         </form>
                     </div>
                 </div>
-                <div class="col-lg-8">
-                    <div class="card p-3 table-wrap">
-                        <table class="table table-hover" id="tableAbsent">
-                            <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="col-12 col-lg-8">
+                    <div class="card p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableAbsent">
+                                <thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,47 +231,52 @@
 
         <!-- ================== การเงิน ================== -->
         <div class="tab-pane fade" id="pane-finance">
-            <div class="row g-4 mb-4">
-                <div class="col-md-4"><div class="fin-box bg-success"><small>รายรับรวม</small><h3 id="f-in" class="fw-bold mb-0">฿0</h3></div></div>
-                <div class="col-md-4"><div class="fin-box bg-danger"><small>ยอดเบิกเงิน</small><h3 id="f-out" class="fw-bold mb-0">฿0</h3></div></div>
-                <div class="col-md-4"><div class="fin-box" style="background:var(--navy);"><small>คงเหลือ</small><h3 id="f-bal" class="fw-bold mb-0">฿0</h3></div></div>
+            <div class="row g-2 g-md-4 mb-4">
+                <div class="col-12 col-md-4"><div class="fin-box bg-success"><small>รายรับรวม</small><h3 id="f-in" class="fw-bold mb-0">฿0</h3></div></div>
+                <div class="col-12 col-md-4"><div class="fin-box bg-danger"><small>ยอดเบิกเงิน</small><h3 id="f-out" class="fw-bold mb-0">฿0</h3></div></div>
+                <div class="col-12 col-md-4"><div class="fin-box" style="background:var(--navy);"><small>คงเหลือ</small><h3 id="f-bal" class="fw-bold mb-0">฿0</h3></div></div>
             </div>
             
-            <div class="row g-4">
-                <div class="col-lg-5">
-                    <div class="card p-4 mb-4 border-top border-success border-4">
+            <div class="row g-3">
+                <div class="col-12 col-lg-5">
+                    <div class="card p-3 p-md-4 mb-3 border-top border-success border-4">
                         <h5 class="card-title text-success"><i class="fas fa-hand-holding-usd me-2"></i>แจ้งรายรับ (ทุกคนเพิ่มได้)</h5>
                         <form onsubmit="handleIncome(event)">
                             <input type="date" id="inc_date" class="form-control mb-2" required>
                             <input type="number" id="inc_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
                             <input type="text" id="inc_desc" class="form-control mb-2" placeholder="รายละเอียด/ที่มาของเงิน" required>
-                            <select id="inc_person" class="form-select student-dropdown mb-3" required><option value="" disabled selected>-- ผู้รับผิดชอบ/ผู้นำฝาก --</option></select>
-                            <button type="submit" class="btn btn-success w-100">บันทึกรายรับ</button>
+                            <input type="text" id="inc_person" list="studentList" class="form-control mb-3" placeholder="🔍 ผู้รับผิดชอบ/ผู้นำฝาก" autocomplete="off" required>
+                            <button type="submit" class="btn btn-success w-100 fw-bold">บันทึกรายรับ</button>
                         </form>
                     </div>
 
-                    <div class="card p-4 border-top border-danger border-4 mb-4">
+                    <div class="card p-3 p-md-4 border-top border-danger border-4 mb-3">
                         <h5 class="card-title text-danger"><i class="fas fa-file-invoice-dollar me-2"></i>แจ้งเบิกเงิน (ต้องแนบสลิป)</h5>
                         <form onsubmit="handleWithdraw(event)">
                             <input type="date" id="exp_date" class="form-control mb-2" required>
-                            <select id="exp_name" class="form-select student-dropdown mb-2" required><option value="" disabled selected>-- เลือกชื่อผู้เบิก --</option></select>
+                            <input type="text" id="exp_name" list="studentList" class="form-control mb-2" placeholder="🔍 ชื่อผู้เบิก" autocomplete="off" required>
                             <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
                             <input type="text" id="exp_desc" class="form-control mb-2" placeholder="เบิกไปทำอะไร?" required>
                             <label class="small fw-bold text-muted mb-1">แนบรูปสลิป/หลักฐานการจ่าย:</label>
+                            
+                            <!-- ช่องอัปโหลดไฟล์ -->
                             <input type="file" id="exp_file" class="form-control mb-2" accept="image/*" required onchange="uploadImage(this)">
+                            
                             <input type="hidden" id="exp_url">
-                            <button type="submit" id="btnExp" class="btn btn-danger w-100 mt-2">ส่งคำขอเบิกเงิน</button>
+                            <button type="submit" id="btnExp" class="btn btn-danger w-100 mt-2 fw-bold">ส่งคำขอเบิกเงิน</button>
                         </form>
                     </div>
                 </div>
 
-                <div class="col-lg-7">
-                    <div class="card p-3 table-wrap mb-4">
-                        <h6 class="fw-bold mb-3">รายการการเงินล่าสุด</h6>
-                        <table class="table table-sm table-hover" id="tableFinance">
-                            <thead><tr><th>วันที่</th><th>รายการ</th><th>ผู้ทำรายการ</th><th>จำนวนเงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="col-12 col-lg-7">
+                    <div class="card p-2 p-md-3 mb-3">
+                        <h6 class="fw-bold mb-3 ms-2 mt-2">รายการการเงินล่าสุด</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle" id="tableFinance">
+                                <thead><tr><th>วันที่</th><th>รายการ</th><th>ผู้ทำรายการ</th><th>จำนวนเงิน</th><th>สลิป</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,21 +284,27 @@
 
         <!-- ================== สถิติรวม ================== -->
         <div class="tab-pane fade" id="pane-stat">
-            <div class="card p-4 table-wrap">
-                <h5 class="card-title text-center mb-4"><i class="fas fa-chart-bar me-2"></i>สรุปสถิติรายบุคคล</h5>
-                <table class="table table-bordered text-center align-middle" id="tableTotal">
-                    <thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+            <div class="card p-3 p-md-4">
+                <h5 class="card-title text-center mb-3"><i class="fas fa-chart-bar me-2"></i>สรุปสถิติรายบุคคล</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle" id="tableTotal">
+                        <thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Datalist กลาง สำหรับให้ทุก Input เรียกใช้ (ดึงข้อมูลมาจาก Apps Script) -->
+<datalist id="studentList"></datalist>
+<datalist id="instList"></datalist>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // 🔴🔴 3. นำ URL WEB APP ล่าสุดของคุณมาวางที่นี่ 🔴🔴
-    const API_URL = 'https://script.google.com/macros/s/AKfycbyP1VlWuhGcOmeoa-twLHCoW1um4UP69abnqgjXIh4i_1k9AdtVKeO0rRfsyxB1OPqLsw/exec'; 
+    // 🔴🔴 ใส่ URL WEB APP ล่าสุดของคุณที่นี่ 🔴🔴
+    const API_URL = 'https://script.google.com/macros/s/AKfycbx_rGa0arDoxbbfj0MTRgUMdIIEi-QI2nDdHpvWT-XUv8WIlDhU1ASrR5gNiyTTzBEtog/exec'; 
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
@@ -270,46 +315,38 @@
         if(isAdm()) { 
             localStorage.removeItem('st_adm_on'); 
             document.body.classList.remove('is-admin');
-            document.getElementById('adminBtn').innerHTML = '<i class="fas fa-lock me-1"></i> เข้าสู่โหมด Admin';
+            document.getElementById('adminBtn').innerHTML = '<i class="fas fa-lock"></i> <span class="d-none d-sm-inline ms-1">เข้าสู่โหมด Admin</span>';
             renderAll(); 
         } else {
             Swal.fire({ title:'Admin Login', input:'password' }).then(r => {
                 if(r.value === 'stband67') { 
                     localStorage.setItem('st_adm_on','true'); 
                     document.body.classList.add('is-admin');
-                    document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock me-1"></i> ออกจากโหมด Admin';
+                    document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>';
                     renderAll(); 
                 } else if(r.isConfirmed) { Swal.fire('รหัสผ่านไม่ถูกต้อง','','error'); }
             });
         }
     }
 
-    // --- อัปเดต Dropdown ---
+    // --- อัปเดต Datalist (แทนที่ Select แบบเก่า) ---
     function updateDropdowns() {
-        const stdOpts = `<option value="" disabled selected>-- เลือกชื่อนักเรียน --</option>` + 
-                        (ALL_DATA.students || []).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-        document.querySelectorAll('.student-dropdown').forEach(el => {
-            const currentVal = el.value; el.innerHTML = stdOpts;
-            if(currentVal && Array.from(el.options).some(opt => opt.value === currentVal)) el.value = currentVal;
-        });
-
-        const instOpts = `<option value="" disabled selected>-- เลือกเครื่องดนตรี --</option>` + 
-                         (ALL_DATA.instruments || []).map(i => `<option value="${i.instrument}">${i.instrument}</option>`).join('');
-        document.querySelectorAll('.inst-dropdown').forEach(el => {
-            const currentVal = el.value; el.innerHTML = instOpts;
-            if(currentVal && Array.from(el.options).some(opt => opt.value === currentVal)) el.value = currentVal;
-        });
+        document.getElementById('studentList').innerHTML = (ALL_DATA.students || []).map(s => `<option value="${s.name}">`).join('');
+        document.getElementById('instList').innerHTML = (ALL_DATA.instruments || []).map(i => `<option value="${i.instrument}">`).join('');
     }
 
-    // --- เพิ่มนักเรียน / เครื่องดนตรี ---
+    // --- เพิ่มข้อมูลใหม่ ---
     function promptNewStudent() {
         Swal.fire({ title:'เพิ่มชื่อนักเรียนใหม่', input:'text', inputPlaceholder:'พิมพ์ชื่อ-นามสกุล' }).then(r => { 
             if(r.value) {
                 const name = r.value.trim(); 
                 if(!ALL_DATA.students) ALL_DATA.students = [];
-                ALL_DATA.students.push({name: name}); updateDropdowns();
-                addToQueue({ type:'add', sheetName:'Students', values:[name] });
-                Swal.fire({toast:true, position:'top-end', icon:'success', title:'เพิ่มชื่อแล้ว', timer:1000, showConfirmButton:false});
+                // ตรวจสอบว่าซ้ำไหม
+                if(!ALL_DATA.students.some(s => s.name === name)) {
+                    ALL_DATA.students.push({name: name}); updateDropdowns();
+                    addToQueue({ type:'add', sheetName:'Students', values:[name] });
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'เพิ่มชื่อแล้ว', timer:1000, showConfirmButton:false});
+                }
             }
         });
     }
@@ -319,16 +356,18 @@
             if(r.value) {
                 const inst = r.value.trim(); 
                 if(!ALL_DATA.instruments) ALL_DATA.instruments = [];
-                ALL_DATA.instruments.push({instrument: inst}); updateDropdowns();
-                addToQueue({ type:'add', sheetName:'Instruments', values:[inst] });
-                Swal.fire({toast:true, position:'top-end', icon:'success', title:'เพิ่มเครื่องดนตรีแล้ว', timer:1000, showConfirmButton:false});
+                if(!ALL_DATA.instruments.some(i => i.instrument === inst)) {
+                    ALL_DATA.instruments.push({instrument: inst}); updateDropdowns();
+                    addToQueue({ type:'add', sheetName:'Instruments', values:[inst] });
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'เพิ่มเครื่องดนตรีแล้ว', timer:1000, showConfirmButton:false});
+                }
             }
         });
     }
 
     function checkOther(sel) { document.getElementById('abs_other').style.display = (sel.value==='อื่นๆ') ? 'block' : 'none'; }
 
-    // --- ระบบ Sync ข้อมูล (แก้ปัญหา CORS แล้ว) ---
+    // --- ระบบ Sync ข้อมูล (Optimistic UI) ---
     function addToQueue(item) { 
         syncQueue.push(item); 
         localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
@@ -341,65 +380,92 @@
         const batch = [...syncQueue]; 
         syncQueue = []; 
         try {
-            // ใช้ text/plain ป้องกัน CORS Preflight Issue ใน Google Apps Script
             const res = await fetch(API_URL, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'sync', payload: batch }) 
             });
             const data = await res.json();
-            
             if(data.status === 'error') throw new Error(data.message);
-            
             localStorage.removeItem('st_sync_queue');
         } catch(e) { 
             console.error(e);
             syncQueue = [...batch, ...syncQueue]; 
             localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue));
-            Swal.fire({toast:true, position:'bottom-end', icon:'error', title:'บันทึกชีตไม่สำเร็จ จะลองใหม่ภายหลัง', showConfirmButton:false, timer:3000});
         }
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- ระบบอัปโหลดรูป (แก้ปัญหา CORS & Base64 แล้ว) ---
+    // --- 🚀 การบีบอัดรูปภาพด้วย Canvas (แก้ปัญหาอัปโหลดค้าง) ---
+    async function compressImage(file, maxWidth = 1000) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // คำนวณสัดส่วนใหม่ถ้ากว้างกว่าที่กำหนด
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // แปลงกลับเป็น Base64 แบบ JPEG ลดคุณภาพเหลือ 70%
+                    resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                };
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    }
+
+    // --- อัปโหลดรูปภาพ ---
     async function uploadImage(input) {
         if(!input.files[0]) return;
         const btn = document.getElementById('btnExp'); 
         const oldText = btn.innerHTML;
         btn.disabled = true; 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปโหลด...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบีบอัดและอัปโหลด...';
         
         try {
             const file = input.files[0];
-            const reader = new FileReader();
             
-            reader.readAsDataURL(file);
-            reader.onload = async function() {
-                const base64 = reader.result;
-                const payload = {
-                    action: 'uploadImage',
-                    payload: { base64: base64, mimeType: file.type, fileName: `Slip_${Date.now()}` }
-                };
-
-                const res = await fetch(API_URL, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload) 
-                });
-                
-                const data = await res.json();
-                if(data.status === 'success') {
-                    document.getElementById('exp_url').value = data.url;
-                    Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสลิปสำเร็จ!', showConfirmButton: false, timer: 1500});
-                } else {
-                    throw new Error(data.message);
-                }
-                btn.disabled = false; btn.innerHTML = oldText;
+            // เรียกใช้ฟังก์ชันบีบอัดรูปภาพ
+            const compressedBase64 = await compressImage(file);
+            
+            const payload = {
+                action: 'uploadImage',
+                payload: { base64: compressedBase64, mimeType: 'image/jpeg', fileName: `Slip_${Date.now()}.jpg` }
             };
+
+            const res = await fetch(API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload) 
+            });
+            
+            const data = await res.json();
+            if(data.status === 'success') {
+                document.getElementById('exp_url').value = data.url;
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสลิปสำเร็จ!', showConfirmButton: false, timer: 1500});
+            } else {
+                throw new Error(data.message);
+            }
         } catch (e) {
             Swal.fire('อัปโหลดล้มเหลว', e.message, 'error');
             input.value = "";
-            btn.disabled = false; btn.innerHTML = oldText;
+        } finally {
+            btn.disabled = false; 
+            btn.innerHTML = oldText;
         }
     }
 
@@ -450,7 +516,7 @@
     function formatThaiDate(dateStr) {
         if(!dateStr) return "-";
         const date = new Date(dateStr);
-        return new Intl.DateTimeFormat('th-TH', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }).format(date).replace("พุทธศักราช ", "");
+        return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(date).replace("พุทธศักราช ", "");
     }
 
     // --- Admin Action Logic ---
@@ -485,7 +551,7 @@
 
     // --- UI Renders ---
     function renderAll() {
-        if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock me-1"></i> ออกจากโหมด Admin'; }
+        if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>'; }
 
         const buildRows = (data, sheet, cols) => (data || []).slice().reverse().map(r => `
             <tr>

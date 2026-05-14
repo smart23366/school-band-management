@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ST BAND MGMT - ระบบบริหารจัดการวง</title>
+    <title>Saengthong Vitthaya Marching Band</title>
     
     <!-- CSS & Libraries -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,10 +18,17 @@
 
     <style>
         :root { --navy: #002D62; --blue-light: #E3F2FD; --gray-bg: #f8f9fa; }
-        body { font-family: 'Prompt', sans-serif; background-color: var(--gray-bg); color: #333; font-size: 0.95rem; }
+        body { font-family: 'Prompt', sans-serif; background-color: var(--gray-bg); color: #333; font-size: 0.95rem; overflow-x: hidden; }
+        
+        /* Loading Screen */
+        #mainLoader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
         
         .navbar-st { background-color: var(--navy); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .navbar-brand { color: white !important; font-weight: 700; font-size: 1.2rem; }
+        .navbar-brand { color: white !important; font-weight: 700; }
         
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .card-title { color: var(--navy); border-bottom: 2px solid var(--blue-light); padding-bottom: 10px; font-weight: 600; font-size: 1.1rem; }
@@ -30,7 +37,7 @@
         .btn-navy:hover { background-color: #001a3a; color: white; }
         
         .nav-pills { background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .nav-pills .nav-link { color: var(--navy); font-weight: 500; border-radius: 8px; margin-right: 5px; white-space: nowrap; }
+        .nav-pills .nav-link { color: var(--navy); font-weight: 500; border-radius: 8px; margin-right: 5px; white-space: nowrap; cursor: pointer; border: none; background: transparent; padding: 8px 16px; }
         .nav-pills .nav-link.active { background-color: var(--navy); color: white; }
 
         .admin-only { display: none !important; }
@@ -49,25 +56,39 @@
         
         #syncToast { position: fixed; bottom: 20px; right: 20px; z-index: 1050; display: none; background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 
-        /* ปรับสไตล์ของ Dropdown ให้เข้ากับระบบ */
         .ts-control { border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; border-color: #dee2e6; }
         .ts-dropdown { font-size: 0.95rem; font-family: 'Prompt'; }
         
         @media (max-width: 768px) {
-            .navbar-brand { font-size: 1rem; }
+            .navbar-brand span { font-size: 1rem; }
             .card { padding: 15px !important; }
             .fin-box h3 { font-size: 1.3rem; }
             table th, table td { white-space: nowrap; }
         }
+        
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
+<!-- หน้าจอ Loading ก่อนข้อมูลมา -->
+<div id="mainLoader">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-3 fw-bold" style="color: var(--navy);">กำลังดึงข้อมูล...</h5>
+</div>
+
 <div id="syncToast"><i class="fas fa-sync fa-spin me-2"></i> กำลังซิงค์ข้อมูล...</div>
 
 <nav class="navbar navbar-expand-lg navbar-st py-2 py-md-3 mb-3 mb-md-4">
-    <div class="container-fluid container-md">
-        <a class="navbar-brand" href="#"><i class="fas fa-drum me-1"></i> ST BAND MGMT</a>
+    <div class="container-fluid container-md d-flex justify-content-between align-items-center">
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <!-- 🔴 ดึงรูปโลโก้จากไฟล์ในโฟลเดอร์ icons ของโปรเจกต์ 🔴 -->
+            <img src="icons/STBAND.png" alt="Logo" style="height: 32px; width: auto; margin-right: 10px; border-radius: 4px;">
+            <span class="d-none d-sm-inline">Saengthong Vitthaya Marching Band</span>
+            <span class="d-inline d-sm-none fs-6">ST BAND MGMT</span>
+        </a>
         <button class="btn btn-outline-light btn-sm fw-bold" onclick="toggleAdmin()" id="adminBtn">
             <i class="fas fa-lock"></i> <span class="d-none d-sm-inline ms-1">เข้าสู่โหมด Admin</span>
         </button>
@@ -75,19 +96,19 @@
 </nav>
 
 <div class="container-fluid container-md pb-5">
-    <!-- เมนู Tabs -->
-    <ul class="nav nav-pills mb-3 overflow-auto flex-nowrap" id="mainTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pane-late">มาสาย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-weekly">สถิติสัปดาห์</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-misc">ผิดวินัย</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-absent">ขาดซ้อม</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-finance">การเงิน</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-stat">สถิติรวม</button></li>
-    </ul>
+    <!-- เมนู Tabs (ระบบสลับหน้าแบบ Custom JS) -->
+    <div class="nav nav-pills mb-3 overflow-auto flex-nowrap" id="mainTab">
+        <button class="nav-link active" onclick="switchTab('pane-late', this)">มาสาย</button>
+        <button class="nav-link" onclick="switchTab('pane-weekly', this)">สถิติสัปดาห์</button>
+        <button class="nav-link" onclick="switchTab('pane-misc', this)">ผิดวินัย</button>
+        <button class="nav-link" onclick="switchTab('pane-absent', this)">ขาดซ้อม</button>
+        <button class="nav-link" onclick="switchTab('pane-finance', this)">การเงิน</button>
+        <button class="nav-link" onclick="switchTab('pane-stat', this)">สถิติรวม</button>
+    </div>
 
     <div class="tab-content">
         <!-- ================== มาสาย ================== -->
-        <div class="tab-pane fade show active" id="pane-late">
+        <div class="tab-pane active" id="pane-late">
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
                     <div class="card p-3 p-md-4">
@@ -95,7 +116,6 @@
                         <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_role', 'late_mins', 'late_note'])">
                             <input type="date" id="late_date" class="form-control mb-2" required>
                             
-                            <!-- เปลี่ยนมาใช้ Select สำหรับ Tom Select -->
                             <div class="mb-2"><select id="late_name" class="student-dropdown" required placeholder="🔍 ค้นหาชื่อนักเรียน..."></select></div>
                             <div class="mb-2"><select id="late_role" class="inst-dropdown" required placeholder="🔍 ค้นหาเครื่องดนตรี..."></select></div>
 
@@ -110,12 +130,12 @@
         </div>
 
         <!-- ================== มาสายรายสัปดาห์ ================== -->
-        <div class="tab-pane fade" id="pane-weekly">
+        <div class="tab-pane" id="pane-weekly">
             <div class="card p-3 p-md-4"><h5 class="card-title text-center mb-3"><i class="fas fa-calendar-week me-2"></i>สถิติมาสายสัปดาห์นี้</h5><div class="table-responsive"><table class="table table-bordered text-center align-middle" id="tableWeekly"><thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>จ</th><th>อ</th><th>พ</th><th>พฤ</th><th>ศ</th><th>ส</th><th>อา</th><th class="table-danger">รวม</th></tr></thead><tbody></tbody></table></div></div>
         </div>
 
         <!-- ================== ผิดวินัย ================== -->
-        <div class="tab-pane fade" id="pane-misc">
+        <div class="tab-pane" id="pane-misc">
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
                     <div class="card p-3 p-md-4 border-top border-danger border-4">
@@ -138,7 +158,7 @@
         </div>
 
         <!-- ================== ขาดซ้อม ================== -->
-        <div class="tab-pane fade" id="pane-absent">
+        <div class="tab-pane" id="pane-absent">
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
                     <div class="card p-3 p-md-4 border-top border-warning border-4">
@@ -161,7 +181,7 @@
         </div>
 
         <!-- ================== การเงิน ================== -->
-        <div class="tab-pane fade" id="pane-finance">
+        <div class="tab-pane" id="pane-finance">
             <div class="row g-2 g-md-4 mb-4">
                 <div class="col-12 col-md-4"><div class="fin-box bg-success"><small>รายรับรวม</small><h3 id="f-in" class="fw-bold mb-0">฿0</h3></div></div>
                 <div class="col-12 col-md-4"><div class="fin-box bg-danger"><small>ยอดเบิกเงิน</small><h3 id="f-out" class="fw-bold mb-0">฿0</h3></div></div>
@@ -202,20 +222,29 @@
         </div>
 
         <!-- ================== สถิติรวม ================== -->
-        <div class="tab-pane fade" id="pane-stat">
+        <div class="tab-pane" id="pane-stat">
             <div class="card p-3 p-md-4"><h5 class="card-title text-center mb-3"><i class="fas fa-chart-bar me-2"></i>สรุปสถิติรายบุคคล</h5><div class="table-responsive"><table class="table table-bordered text-center align-middle" id="tableTotal"><thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr></thead><tbody></tbody></table></div></div>
         </div>
     </div>
 </div>
 
 <script>
-    // 🔴🔴 ใส่ URL WEB APP ล่าสุดของคุณที่นี่ 🔴🔴
-    const API_URL = 'https://script.google.com/macros/s/AKfycbyP1VlWuhGcOmeoa-twLHCoW1um4UP69abnqgjXIh4i_1k9AdtVKeO0rRfsyxB1OPqLsw/exec'; 
+    // 🔴🔴 ใส่ URL WEB APP ของคุณที่นี่ (ของ Google Apps Script) 🔴🔴
+    const API_URL = 'https://script.google.com/macros/s/AKfycbx_rGa0arDoxbbfj0MTRgUMdIIEi-QI2nDdHpvWT-XUv8WIlDhU1ASrR5gNiyTTzBEtog/exec'; 
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
     let tsStudentInstances = [];
     let tsInstInstances = [];
+
+    // --- ระบบสลับแท็บ ---
+    function switchTab(targetId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(targetId).classList.add('active');
+        btn.classList.add('active');
+    }
 
     // --- ระบบ Admin ---
     function isAdm() { return localStorage.getItem('st_adm_on') === 'true'; }
@@ -237,28 +266,22 @@
         }
     }
 
-    // --- เริ่มต้นใช้งาน Tom Select (ค้นหาและพิมพ์เพิ่มได้ทันที) ---
+    // --- Tom Select Dropdown ---
     function initTomSelect() {
-        // Dropdown นักเรียน
         document.querySelectorAll('.student-dropdown').forEach(el => {
             let ts = new TomSelect(el, {
-                create: function(input) { // ถ้าพิมพ์ชื่อไม่มี ให้สร้างใหม่
+                create: function(input) {
                     if(!ALL_DATA.students) ALL_DATA.students = [];
                     ALL_DATA.students.push({name: input});
                     addToQueue({ type:'add', sheetName:'Students', values:[input] });
-                    setTimeout(updateDropdowns, 100); // อัปเดตช่องอื่นๆ ให้มีชื่อนี้ด้วย
+                    setTimeout(updateDropdowns, 100);
                     return { value: input, text: input };
                 },
-                render: {
-                    option_create: function(data, escape) {
-                        return '<div class="create">กดเพื่อเพิ่ม <strong>' + escape(data.input) + '</strong> ใหม่</div>';
-                    }
-                }
+                render: { option_create: function(data, escape) { return '<div class="create">กดเพื่อเพิ่ม <strong>' + escape(data.input) + '</strong> ใหม่</div>'; } }
             });
             tsStudentInstances.push(ts);
         });
 
-        // Dropdown เครื่องดนตรี
         document.querySelectorAll('.inst-dropdown').forEach(el => {
             let ts = new TomSelect(el, {
                 create: function(input) {
@@ -268,11 +291,7 @@
                     setTimeout(updateDropdowns, 100);
                     return { value: input, text: input };
                 },
-                render: {
-                    option_create: function(data, escape) {
-                        return '<div class="create">กดเพื่อเพิ่ม <strong>' + escape(data.input) + '</strong> ใหม่</div>';
-                    }
-                }
+                render: { option_create: function(data, escape) { return '<div class="create">กดเพื่อเพิ่ม <strong>' + escape(data.input) + '</strong> ใหม่</div>'; } }
             });
             tsInstInstances.push(ts);
         });
@@ -281,24 +300,18 @@
     function updateDropdowns() {
         const stdOptions = (ALL_DATA.students || []).map(s => ({value: s.name, text: s.name}));
         tsStudentInstances.forEach(ts => {
-            const current = ts.getValue();
-            ts.clearOptions();
-            ts.addOptions(stdOptions);
-            if(current) ts.setValue(current);
+            const current = ts.getValue(); ts.clearOptions(); ts.addOptions(stdOptions); if(current) ts.setValue(current);
         });
 
         const instOptions = (ALL_DATA.instruments || []).map(i => ({value: i.instrument, text: i.instrument}));
         tsInstInstances.forEach(ts => {
-            const current = ts.getValue();
-            ts.clearOptions();
-            ts.addOptions(instOptions);
-            if(current) ts.setValue(current);
+            const current = ts.getValue(); ts.clearOptions(); ts.addOptions(instOptions); if(current) ts.setValue(current);
         });
     }
 
     function checkOther(sel) { document.getElementById('abs_other').style.display = (sel.value==='อื่นๆ') ? 'block' : 'none'; }
 
-    // --- ระบบ Sync ข้อมูล ---
+    // --- Sync ข้อมูล ---
     function addToQueue(item) { 
         syncQueue.push(item); 
         localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
@@ -327,7 +340,7 @@
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- บีบอัดภาพ (Compress Image) ---
+    // --- อัปโหลดรูป ---
     async function compressImage(file, maxWidth = 1000) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -342,14 +355,13 @@
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7)); // ลดขนาดเหลือ 70% ป้องกัน Timeout
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
                 };
             };
             reader.onerror = (error) => reject(error);
         });
     }
 
-    // --- อัปโหลดรูปภาพ (เพิ่มระบบป้องกัน Timeout) ---
     async function uploadImage(input) {
         if(!input.files[0]) return;
         const btn = document.getElementById('btnExp'); 
@@ -360,16 +372,10 @@
         try {
             const file = input.files[0];
             const compressedBase64 = await compressImage(file);
-            
-            const payload = {
-                action: 'uploadImage',
-                payload: { base64: compressedBase64, mimeType: 'image/jpeg', fileName: `Slip_${Date.now()}.jpg` }
-            };
+            const payload = { action: 'uploadImage', payload: { base64: compressedBase64, mimeType: 'image/jpeg', fileName: `Slip_${Date.now()}.jpg` } };
 
             const res = await fetch(API_URL, { 
-                method: 'POST', 
-                redirect: 'follow', // ป้องกันปัญหา CORS
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload) 
             });
             
@@ -377,46 +383,26 @@
             if(data.status === 'success') {
                 document.getElementById('exp_url').value = data.url;
                 Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสลิปสำเร็จ!', showConfirmButton: false, timer: 1500});
-            } else {
-                throw new Error(data.message);
-            }
+            } else { throw new Error(data.message); }
         } catch (e) {
-            Swal.fire({
-                title: 'อัปโหลดล้มเหลว', 
-                text: "โปรดเช็คว่า Deploy สคริปต์เป็น 'ทุกคน (Anyone)' แล้ว", 
-                icon: 'error'
-            });
+            Swal.fire({ title: 'อัปโหลดล้มเหลว', text: "โปรดเช็คว่า Deploy สคริปต์เป็น 'ทุกคน (Anyone)' แล้ว", icon: 'error' });
             input.value = "";
-        } finally {
-            btn.disabled = false; btn.innerHTML = oldText;
-        }
+        } finally { btn.disabled = false; btn.innerHTML = oldText; }
     }
 
-    // --- Form Handlers ---
+    // --- จัดการฟอร์ม ---
     function handleForm(e, sheet, fids) {
         e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
-        
         fids.forEach(fid => {
-            let el = document.getElementById(fid);
-            let val = el ? el.value : '';
+            let el = document.getElementById(fid); let val = el ? el.value : '';
             if(fid==='abs_type' && val==='อื่นๆ') val = document.getElementById('abs_other').value || 'อื่นๆ';
-            
-            const k = fid.split('_')[1]; 
-            const m = { name:'name', role:'role', date:'date', type:'type', detail:'detail', note:'note', mins:'mins', level:'level' };
+            const k = fid.split('_')[1]; const m = { name:'name', role:'role', date:'date', type:'type', detail:'detail', note:'note', mins:'mins', level:'level' };
             row[m[k] || k] = val; vals.push(val);
         });
-        
         vals.push('pending'); ALL_DATA[sheet.toLowerCase()].push(row); renderAll(); e.target.reset(); 
-        
-        // ล้างค่าใน Tom Select
-        e.target.querySelectorAll('.student-dropdown, .inst-dropdown').forEach(el => {
-            if(el.tomselect) el.tomselect.clear();
-        });
-
-        const dateEl = document.getElementById(fids[0]);
-        if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        e.target.querySelectorAll('.student-dropdown, .inst-dropdown').forEach(el => { if(el.tomselect) el.tomselect.clear(); });
+        const dateEl = document.getElementById(fids[0]); if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
         if(document.getElementById('abs_other')) document.getElementById('abs_other').style.display='none';
-        
         addToQueue({ type:'add', sheetName:sheet, values:vals });
         Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1000});
     }
@@ -443,14 +429,11 @@
 
     function formatThaiDate(dateStr) {
         if(!dateStr) return "-";
-        const date = new Date(dateStr);
-        return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(date).replace("พุทธศักราช ", "");
+        return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateStr)).replace("พุทธศักราช ", "");
     }
 
-    // --- Admin Action Logic ---
     function makeEditable(el, sheet, id, col) {
-        if(!isAdm()) return;
-        const old = el.innerText;
+        if(!isAdm()) return; const old = el.innerText;
         el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')"><i class="fas fa-check"></i></button></div>`;
         el.ondblclick = null;
     }
@@ -477,7 +460,7 @@
         });
     }
 
-    // --- UI Renders ---
+    // --- Render ทุกอย่าง ---
     function renderAll() {
         if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>'; }
 
@@ -547,19 +530,25 @@
     }
 
     async function init() {
-        initTomSelect(); // โหลด Dropdown
+        initTomSelect(); 
         try { 
             const res = await fetch(API_URL + '?action=getAll'); 
             const fetchedData = await res.json(); 
             ALL_DATA = { ...ALL_DATA, ...fetchedData }; 
-            updateDropdowns(); // อัปเดตข้อมูลเข้าไปใน Dropdown
+            updateDropdowns(); 
             renderAll(); 
-        } catch(e) { console.error("Initial load failed"); }
+        } catch(e) { 
+            console.error("Initial load failed"); 
+            Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'กรุณารีเฟรชหน้าเว็บอีกครั้ง', icon: 'error'});
+        } finally {
+            document.getElementById('mainLoader').style.display = 'none';
+        }
     }
     
     window.onload = () => { 
         document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]);
-        init(); if(syncQueue.length > 0) processSync(); 
+        init(); 
+        if(syncQueue.length > 0) processSync(); 
     };
 </script>
 </body>

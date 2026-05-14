@@ -199,9 +199,9 @@
                             <div class="mb-2"><select id="exp_name" class="student-dropdown" required placeholder="🔍 ค้นหาชื่อผู้เบิก..."></select></div>
                             <input type="number" id="exp_amt" class="form-control mb-2" placeholder="จำนวนเงิน" required>
                             <input type="text" id="exp_desc" class="form-control mb-2" placeholder="เบิกไปทำอะไร?" required>
-                            
-                            <label class="small fw-bold text-muted mb-1">ลิงก์สลิปเงิน (นำลิงก์จาก LINE Bot มาวาง):</label>
-                            <input type="url" id="exp_url" class="form-control mb-2" placeholder="https://drive.google.com/..." required>
+
+                            <label class="small fw-bold text-muted mb-1">อัปโหลดสลิปเงิน (หลักฐานการโอน):</label>
+                            <input type="file" id="exp_file" class="form-control mb-2" accept="image/*" required>
                             
                             <button type="submit" id="btnExp" class="btn btn-danger w-100 mt-2 fw-bold">ส่งคำขอเบิกเงิน</button>
                         </form>
@@ -218,7 +218,7 @@
 </div>
 
 <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbygORmKxXKUgpgEKzbjRTiBY_2MH2DUu6ApID-2Kf19-cFpxPXvVb2zoZ-NVmvm6KP_VQ/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxKNG76AfE40gWjVzbRteqss17Vy1Ud3TK7sbCGToc0ZLugF6VsXFj1YerGntaJv2Kdag/exec';
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');

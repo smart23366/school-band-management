@@ -62,7 +62,7 @@
         .table-responsive { border-radius: 8px; }
         table thead tr { background-color: var(--navy); color: white; font-size: 0.9rem; }
         table tbody tr td { font-size: 0.9rem; vertical-align: middle; }
-        .editable { cursor: pointer; border-bottom: 1px dashed #ccc; }
+        .editable { cursor: pointer; border-bottom: 1px dashed #002D62; font-weight: 500; color: #002D62; }
         .editable:hover { background-color: var(--blue-light); }
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
         .fin-box { border-radius: 12px; padding: 15px; color: white; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -116,17 +116,16 @@
                 <div class="col-12 col-lg-4">
                     <div class="card p-3 p-md-4">
                         <h5 class="card-title"><i class="fas fa-clock me-2"></i>บันทึกมาสาย</h5>
-                        <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_role', 'late_mins', 'late_note'])">
+                        <form onsubmit="handleForm(event, 'Late', ['late_date', 'late_name', 'late_role', 'late_note'])">
                             <input type="date" id="late_date" class="form-control mb-2" required>
                             <div class="mb-2"><select id="late_name" class="student-dropdown" required placeholder="🔍 ค้นหาชื่อนักเรียน..."></select></div>
                             <div class="mb-2"><select id="late_role" class="inst-dropdown" required placeholder="🔍 ค้นหาเครื่องดนตรี..."></select></div>
-                            <input type="number" id="late_mins" class="form-control mb-2" placeholder="สายกี่นาที?" required>
-                            <textarea id="late_note" class="form-control mb-3" placeholder="เหตุผลที่สาย"></textarea>
+                            <textarea id="late_note" class="form-control mb-3" placeholder="เหตุผลที่สาย" required></textarea>
                             <button type="submit" class="btn btn-navy w-100 fw-bold">บันทึกข้อมูล</button>
                         </form>
                     </div>
                 </div>
-                <div class="col-12 col-lg-8"><div class="card p-2 p-md-3"><div class="table-responsive"><table class="table table-hover align-middle" id="tableLate"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>สาย (นาที)</th><th>หมายเหตุ</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div></div>
+                <div class="col-12 col-lg-8"><div class="card p-2 p-md-3"><div class="table-responsive"><table class="table table-hover align-middle" id="tableLate"><thead><tr><th>วันที่</th><th>ชื่อนักเรียน</th><th>ตำแหน่ง</th><th>เหตุผล</th><th>สถานะ</th><th class="admin-only">จัดการ</th></tr></thead><tbody></tbody></table></div></div></div>
             </div>
         </div>
 
@@ -219,15 +218,13 @@
 </div>
 
 <script>
-
-    const API_URL = 'https://script.google.com/macros/s/AKfycbyB88TKP3J462HvmqcBqeLHscXawtIIDkLeplh5B-UDnRuBR3y14uu2QMAFApUmh4WIEg/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbx9YBmh1nXPHMTv681tvs6pBlp9WCVQ-Zr8vzhTJjccFo9UtCK4zfF4f4cIpK9unavLgA/exec';
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
     let tsStudentInstances = [];
     let tsInstInstances = [];
 
-    // 👇👇👇 1. วางฟังก์ชัน handleWithdraw ใหม่ตรงนี้เลยครับ 👇👇👇
     async function handleWithdraw(event) {
         event.preventDefault();
         const btn = document.getElementById('btnExp');
@@ -250,7 +247,6 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลด...';
 
         try {
-            // บีบอัดภาพก่อนส่ง
             const base64Str = await compressImage(file);
             const base64Data = base64Str.split(',')[1];
             
@@ -263,27 +259,21 @@
                 } 
             };
 
-            // ส่งรูปไปที่ Apps Script
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
             const data = await res.json();
 
             if(data.status === 'success') {
-                btn.innerHTML = '📝 กำลังบันทึกข้อมูล...';
-                
-                // เมื่อรูปสำเร็จ เตรียมข้อมูลลงตาราง
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>📝 กำลังบันทึกข้อมูล...';
                 const id = Date.now();
                 const vals = [id, expData.date, expData.name, expData.amount, expData.desc, data.url, 'pending'];
-                
-                // อัปเดตตารางหน้าเว็บ
                 ALL_DATA.expense.push({ id, date:vals[1], name:vals[2], amount:vals[3], desc:vals[4], slipUrl:vals[5], status:'pending' });
+                
                 renderAll(); 
-                
-                // ส่งข้อมูลเข้าคิวซิงค์ (ลง Sheet)
-                addToQueue({ type:'add', sheetName:'Expense', values:vals });
-                
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'สำเร็จ! ข้อมูลและรูปถูกบันทึกแล้ว', showConfirmButton: false, timer: 2000});
-                document.querySelector('#pane-finance form').reset();
+                document.querySelector('#pane-finance form:last-of-type').reset();
                 document.getElementById('exp_date').valueAsDate = new Date();
+                
+                addToQueue({ type:'add', sheetName:'Expense', values:vals });
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'ส่งคำขอเบิกเงินสำเร็จ!', showConfirmButton: false, timer: 1500});
             } else {
                 throw new Error(data.message);
             }
@@ -295,7 +285,6 @@
         }
     }
 
-    // --- ฟังก์ชันช่วยเหลือ (ทำงานร่วมกับ handleWithdraw) ---
     async function compressImage(file, maxWidth = 1000) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader(); 
@@ -306,14 +295,13 @@
                     const canvas = document.createElement('canvas'); let width = img.width, height = img.height;
                     if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
                     canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7)); // แปลงเป็น JPG เพื่อประหยัดพื้นที่
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
                 };
             };
             reader.onerror = error => reject(error);
         });
     }
 
-    // --- ส่วนการจัดการ UI ทั่วไป ---
     function switchTab(targetId, btn) {
         document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -358,7 +346,6 @@
         }
     }
 
-    // --- ระบบซิงค์ข้อมูล (TomSelect + Queue) ---
     function initTomSelect() {
         tsStudentInstances.forEach(ts => ts.destroy());
         tsInstInstances.forEach(ts => ts.destroy());
@@ -414,13 +401,12 @@
         document.getElementById('syncToast').style.display = 'none';
     }
 
-    // --- ส่วนบันทึกข้อมูลฟอร์มอื่นๆ ---
     function handleForm(e, sheet, fids) {
         e.preventDefault(); const id = Date.now(); const row = { id, status:'pending' }; const vals = [id];
         fids.forEach(fid => {
             let el = document.getElementById(fid); let val = el ? el.value : '';
             if(fid==='abs_type' && val==='อื่นๆ') val = document.getElementById('abs_other').value || 'อื่นๆ';
-            const m = { name:'name', role:'role', date:'date', type:'type', detail:'detail', note:'note', mins:'mins', level:'level' };
+            const m = { name:'name', role:'role', date:'date', type:'type', detail:'detail', note:'note', level:'level' };
             row[m[fid.split('_')[1]] || fid.split('_')[1]] = val; vals.push(val);
         });
         vals.push('pending'); ALL_DATA[sheet.toLowerCase()].push(row); renderAll(); e.target.reset();
@@ -435,22 +421,89 @@
         addToQueue({ type:'add', sheetName:'Income', values:vals });
     }
 
-    // --- ส่วนแสดงผลตารางและการคำนวณ ---
     function formatThaiDate(dateStr) { if(!dateStr) return "-"; return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateStr)).replace("พุทธศักราช ", ""); }
-    function makeEditable(el, sheet, id, col) { if(!isAdm()) return; const old = el.innerText; el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')"><i class="fas fa-check"></i></button></div>`; el.ondblclick = null; }
-    function saveEdit(btn, sheet, id, col) { const val = btn.previousElementSibling.value; const td = btn.closest('td'); td.innerText = val; td.ondblclick = () => makeEditable(td, sheet, id, col); const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) item[col] = val; addToQueue({ type:'update', sheetName:sheet, id, columnName:col, newValue:val }); }
-    function upStatus(sheet, id, st) { const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) { item.status=st; renderAll(); addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); } }
+    
+    function makeEditable(el, sheet, id, col) { 
+        if(!isAdm()) return; 
+        const old = el.innerText; 
+        el.innerHTML = `<div class="d-flex"><input type="text" class="form-control form-control-sm" value="${old}"><button class="btn btn-sm btn-success ms-1" onclick="saveEdit(this,'${sheet}','${id}','${col}')"><i class="fas fa-check"></i></button></div>`; 
+        el.ondblclick = null; 
+    }
+    
+    function saveEdit(btn, sheet, id, col) { 
+        const val = btn.previousElementSibling.value; 
+        const td = btn.closest('td'); 
+        td.innerText = val; 
+        td.ondblclick = () => makeEditable(td, sheet, id, col); 
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); 
+        if(item) item[col] = val; 
+        addToQueue({ type:'update', sheetName:sheet, id, columnName:col, newValue:val }); 
+    }
+    
+    function upStatus(sheet, id, st) { 
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); 
+        if(item) { 
+            item.status = st; 
+            renderAll(); 
+            addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); 
+        } 
+    }
+    
     function delRec(sheet, id) { Swal.fire({ title: 'ลบข้อมูลนี้?', icon: 'warning', showCancelButton: true }).then((r) => { if (r.isConfirmed) { ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id); renderAll(); addToQueue({ type:'delete', sheetName:sheet, id }); } }); }
 
     function renderAll() {
         if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>'; }
-        const bR = (data, sheet, cols) => (data || []).slice().reverse().map(r => `<tr><td class="fw-bold">${formatThaiDate(r.date)}</td><td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','name')">${r.name}</td><td><span class="badge bg-secondary">${r.role||'-'}</span></td>${cols.map(c => `<td>${r[c]||'-'}</td>`).join('')}<td><span class="status-badge ${r.status==='pending'?'bg-light text-dark':'bg-success text-white'}">${r.status==='pending'?'รอตรวจ':'ผ่าน'}</span></td><td class="admin-only"><button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-        document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['mins', 'note']);
-        document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail']);
-        document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note']);
         
+        // 🚩 ฟังก์ชันสร้างแถวตารางแบบ Dynamic ปรับเงื่อนไขสี และสิทธิ์การแก้ไขให้ตรงเงื่อนไขใหม่ของคุณ
+        const bR = (data, sheet, cols, editableCol) => (data || []).slice().reverse().map(r => {
+            const isPending = r.status === 'pending';
+            const statusClass = isPending ? 'bg-danger text-white' : 'bg-success text-white';
+            const statusText = isPending ? 'รอตรวจ' : 'ผ่าน';
+            
+            return `<tr>
+                <td class="fw-bold">${formatThaiDate(r.date)}</td>
+                <td>${r.name}</td>
+                <td><span class="badge bg-secondary">${r.role||'-'}</span></td>
+                ${cols.map(c => {
+                    if (c === editableCol) {
+                        return `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c]||'-'}</td>`;
+                    } else {
+                        return `<td>${r[c]||'-'}</td>`;
+                    }
+                }).join('')}
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td class="admin-only">
+                    ${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}
+                    <button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        // วาดตารางตามคอลัมน์และกำหนดสิทธิ์แก้ไขข้อมูลเฉพาะจุดที่ต้องการ (ชื่อคนห้ามแก้)
+        document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['note'], 'note'); // แก้ไขเหตุผลได้
+        document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail'], 'detail'); // แก้รายละเอียดวินัยได้
+        document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note'); // แก้เหตุผลขาดซ้อมได้
+        
+        // ตารางการเงิน
         const fR = [...(ALL_DATA.income || []).map(i => ({...i, sheet: 'Income', act: 'รายรับ', col: 'success'})), ...(ALL_DATA.expense || []).map(e => ({...e, sheet: 'Expense', act: 'เบิกเงิน', col: 'danger'}))].sort((a,b) => new Date(a.date) - new Date(b.date));
-        document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${r.status==='pending'?'bg-light text-dark':'bg-success text-white'}">${r.status==='pending'?'รอตรวจ':'อนุมัติ'}</span></td><td class="admin-only"><button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => {
+            const isPending = r.status === 'pending';
+            const statusClass = isPending ? 'bg-danger text-white' : 'bg-success text-white';
+            const statusText = isPending ? 'รอตรวจ' : 'อนุมัติ';
+            
+            return `<tr>
+                <td>${formatThaiDate(r.date)}</td>
+                <td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td>
+                <td>${r.person || r.name}</td>
+                <td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td>
+                <td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td class="admin-only">
+                    ${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}
+                    <button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
         
         renderWeekly(); calculateFinance(); renderStats();
     }
@@ -473,25 +526,16 @@
         document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="fw-bold text-start">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
     }
 
-    // --- เริ่มต้นการทำงาน (Initialization) ---
     async function init() {
         try {
             const res = await fetch(API_URL + '?action=getAll');
             const data = await res.json();
             ALL_DATA = { ...ALL_DATA, ...data };
             initTomSelect(); renderAll();
-        } catch(e) { 
-            Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); 
-        } finally { 
-            document.getElementById('mainLoader').style.display = 'none'; 
-        }
+        } catch(e) { Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); }
+        finally { document.getElementById('mainLoader').style.display = 'none'; }
     }
-    
-    window.onload = () => { 
-        document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]); 
-        init(); 
-        if(syncQueue.length > 0) processSync(); 
-    };
+    window.onload = () => { document.querySelectorAll('input[type="date"]').forEach(el => el.value = new Date().toISOString().split('T')[0]); init(); if(syncQueue.length > 0) processSync(); };
 </script>
 </body>
 </html>

@@ -399,16 +399,18 @@
 
         document.querySelectorAll('.student-dropdown').forEach(el => {
             let ts = new TomSelect(el, { valueField:'value', labelField:'text', searchField:'text', options:activeStdOptions, create: function(input) {
-                if(!ALL_DATA.students) ALL_DATA.students = []; ALL_DATA.students.push({name: input, status: 'Active'});
-                addToQueue({ type:'add', sheetName:'Students', values:[input, 'Active'] }); setTimeout(updateDropdowns, 100); return { value: input, text: input };
+                if(!input || !input.trim()) return null;
+                if(!ALL_DATA.students) ALL_DATA.students = []; ALL_DATA.students.push({name: input.trim(), status: 'Active'});
+                addToQueue({ type:'add', sheetName:'Students', values:[input.trim(), 'Active'] }); setTimeout(updateDropdowns, 100); return { value: input.trim(), text: input.trim() };
             }, render:{option_create:(data,escape)=>'<div class="create">เพิ่ม <strong>'+escape(data.input)+'</strong></div>'} });
             tsStudentInstances.push(ts);
         });
 
         document.querySelectorAll('.inst-dropdown').forEach(el => {
             let ts = new TomSelect(el, { valueField:'value', labelField:'text', searchField:'text', options:instOptions, create: function(input) {
-                if(!ALL_DATA.instruments) ALL_DATA.instruments = []; ALL_DATA.instruments.push({instrument: input});
-                addToQueue({ type:'add', sheetName:'Instruments', values:[input] }); setTimeout(updateDropdowns, 100); return { value: input, text: input };
+                if(!input || !input.trim()) return null;
+                if(!ALL_DATA.instruments) ALL_DATA.instruments = []; ALL_DATA.instruments.push({instrument: input.trim()});
+                addToQueue({ type:'add', sheetName:'Instruments', values:[input.trim()] }); setTimeout(updateDropdowns, 100); return { value: input.trim(), text: input.trim() };
             }, render:{option_create:(data,escape)=>'<div class="create">เพิ่ม <strong>'+escape(data.input)+'</strong></div>'} });
             tsInstInstances.push(ts);
         });
@@ -574,7 +576,7 @@
         if(!isAdm()) return Swal.fire('สิทธิ์ไม่เพียงพอ', 'เฉพาะ Admin เท่านั้นที่สามารถอัปเดตสถานะเงินได้ครับ', 'warning');
 
         // ค้นหาประวัติก่อนหน้าประเภทเดียวกัน
-        let priorRecords = ALL_DATA.feepayments.filter(p => p.student_name === studentName && p.campaign_id < campId && ALL_DATA.feecampaigns.find(c => c.id == p.campaign_id && c.type === campType));
+        let priorRecords = ALL_DATA.feepayments.filter(p => p.student_name === studentName && Number(p.campaign_id) < Number(campId) && ALL_DATA.feecampaigns.find(c => c.id == p.campaign_id && c.type === campType));
         
         // เช็คว่าเด็กคนนี้มีสิทธิ์กดปุ่มสีฟ้า ✨ ไหม (ถ้าเคยจ่าย/หรือเคยติดสีฟ้ามาแล้ว จะไม่มีปุ่มนี้ให้กด)
         let canBeExempt = true;
@@ -634,7 +636,7 @@
         if(document.querySelector('#tableAbsent tbody')) document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note');
         
         const fR = [...(ALL_DATA.income || []).map(i => ({...i, sheet: 'Income', act: 'รายรับ', col: 'success'})), ...(ALL_DATA.expense || []).map(e => ({...e, sheet: 'Expense', act: 'เบิกเงิน', col: 'danger'}))].sort((a,b) => new Date(a.date) - new Date(b.date));
-        if(document.querySelector('#tableFinance tbody')) document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => { const isPending = r.status === 'pending'; return `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${isPending ? 'bg-danger text-white' : 'bg-success text-white'}">${isPending ? 'รอตรวจ' : 'อนุมัติ'}</span></td><td class="admin-only">${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}<button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('');
+        if(document.querySelector('#tableFinance tbody')) document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => { const isPending = r.status === 'pending'; return `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${isPending ? 'bg-danger text-white' : 'bg-success text-white'}">${isPending ? 'รอตรวจ' : 'อนุมัติ'}</span></td><td class="admin-only">${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','r.id','approved')"><i class="fas fa-check"></i></button> ` : ''}<button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('');
         
         renderWeekly(); calculateFinance(); renderStats(); renderMembers(); renderFeeSelect();
     }
@@ -661,6 +663,12 @@
         try {
             const res = await fetch(API_URL + '?action=getAll&t=' + Date.now());
             const data = await res.json(); ALL_DATA = { ...ALL_DATA, ...data };
+            
+            // 🚀 แก้ไขจุดนี้: กรองรายชื่อแถวว่างที่มาจากระบบจัดกลุ่มใน Google Sheets ออกทันทีก่อนนำไปประมวลผลต่อ
+            if (ALL_DATA.students) {
+                ALL_DATA.students = ALL_DATA.students.filter(s => s.name && s.name.trim() !== '');
+            }
+            
             initTomSelect(); renderAll();
         } catch(e) { Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); }
         finally { document.getElementById('mainLoader').style.display = 'none'; }

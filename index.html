@@ -17,18 +17,8 @@
             "background_color": "#ffffff",
             "theme_color": "#003366",
             "icons": [
-                {
-                    "src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png",
-                    "sizes": "192x192",
-                    "type": "image/png",
-                    "purpose": "maskable any" 
-                },
-                {
-                    "src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png",
-                    "sizes": "512x512",
-                    "type": "image/png",
-                    "purpose": "maskable any"
-                }
+                { "src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+                { "src": "https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
             ]
         };
         const manifestData = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestJSON));
@@ -74,6 +64,13 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 🚩 ดีไซน์ปุ่มสถานะเงินและแถบคนออก เพิ่มเติมให้เข้ากับธีมคุณ */
+        .btn-check-pay { border-radius: 20px; padding: 5px 15px; font-weight: 600; font-size: 0.85rem; border: 2px solid transparent; transition: 0.2s; }
+        .btn-check-pay.unpaid { background: #ffebee; color: #d32f2f; border-color: #d32f2f; }
+        .btn-check-pay.paid { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
+        .btn-check-pay.exempt { background: #e0f7fa; color: #00838f; border-color: #00838f; }
+        .resigned-row { background-color: #e9ecef !important; color: #6c757d; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -107,6 +104,8 @@
         <button class="nav-link" onclick="switchTab('pane-absent', this)">ขาดซ้อม</button>
         <button class="nav-link" onclick="switchTab('pane-finance', this)">การเงิน</button>
         <button class="nav-link" onclick="switchTab('pane-stat', this)">สถิติรวม</button>
+        <button class="nav-link text-success fw-bold" onclick="switchTab('pane-fees', this)"><i class="fas fa-coins me-1"></i> เก็บเงิน</button>
+        <button class="nav-link text-danger fw-bold admin-only" onclick="switchTab('pane-members', this)"><i class="fas fa-users me-1"></i> สมาชิก</button>
     </div>
 
     <div class="tab-content">
@@ -213,17 +212,94 @@
         <div class="tab-pane" id="pane-stat">
             <div class="card p-3 p-md-4"><h5 class="card-title text-center mb-3"><i class="fas fa-chart-bar me-2"></i>สรุปสถิติรายบุคคล</h5><div class="table-responsive"><table class="table table-bordered text-center align-middle" id="tableTotal"><thead class="table-light"><tr><th>ชื่อนักเรียน</th><th>มาสาย (ครั้ง)</th><th>ผิดวินัย (ครั้ง)</th><th>ขาดซ้อม (ครั้ง)</th><th class="table-dark">รวมแต้มสะสม</th></tr></thead><tbody></tbody></table></div></div>
         </div>
-        
+
+        <div class="tab-pane" id="pane-fees">
+            <div class="row g-3">
+                <div class="col-12 col-lg-4 admin-only">
+                    <div class="card p-3 p-md-4 border-top border-success border-4">
+                        <h5 class="card-title text-success"><i class="fas fa-plus-circle me-2"></i>เปิดรอบเก็บเงินใหม่</h5>
+                        <form onsubmit="handleCreateCampaign(event)">
+                            <select id="camp_type" class="form-select mb-2" required>
+                                <option value="เงินกองกลางวง">เงินกองกลางวง</option>
+                                <option value="ค่าอื่นๆ">ค่าอื่นๆ (เสื้อ/อุปกรณ์)</option>
+                            </select>
+                            <input type="text" id="camp_title" class="form-control mb-2" placeholder="ชื่อรอบ เช่น กองกลางครั้งที่ 1" required>
+                            <input type="number" id="camp_amt" class="form-control mb-3" placeholder="จำนวนเงินที่เก็บ (บาท)" required>
+                            <button type="submit" id="btnCamp" class="btn btn-success w-100 fw-bold">สร้างบิลให้สมาชิกทุกคน</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-8">
+                    <div class="card p-3 p-md-4">
+                        <h5 class="card-title"><i class="fas fa-clipboard-check me-2"></i>ตารางรับเงินประจำรอบ</h5>
+                        
+                        <div class="btn-group w-100 mb-3" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm active" id="btnFilterAll" onclick="filterCampaignType('all')">ดูทั้งหมด</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnFilterPool" onclick="filterCampaignType('เงินกองกลางวง')">เงินกองกลางวง</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnFilterOther" onclick="filterCampaignType('ค่าอื่นๆ')">ค่าอื่นๆ</button>
+                        </div>
+
+                        <select id="select_campaign" class="form-select mb-3 border-primary" onchange="renderFeeTable()">
+                            <option value="">-- เลือกรอบการเก็บเงิน --</option>
+                        </select>
+                        <div class="d-flex justify-content-between mb-2 fw-bold" style="color:var(--navy);" id="fee_summary"></div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableFee">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อนักเรียน</th>
+                                        <th>วันที่อัปเดต</th>
+                                        <th class="text-center">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="3" class="text-center text-muted">กรุณาเลือกรอบการเก็บเงินด้านบน</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane" id="pane-members">
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card p-3 p-md-4">
+                        <h5 class="card-title text-success"><i class="fas fa-user-check me-2"></i>สมาชิกที่ยังอยู่ (Active)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle" id="tableActive">
+                                <thead><tr><th>ชื่อนักเรียน</th><th class="text-end">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card p-3 p-md-4 bg-light border">
+                        <h5 class="card-title text-secondary"><i class="fas fa-user-times me-2"></i>สมาชิกที่ออกแล้ว (Resigned)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle text-muted" id="tableResigned">
+                                <thead><tr><th>ชื่อนักเรียน</th><th class="text-end">จัดการ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbyB88TKP3J462HvmqcBqeLHscXawtIIDkLeplh5B-UDnRuBR3y14uu2QMAFApUmh4WIEg/exec';
     
-    let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[] };
+    let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[], feecampaigns:[], feepayments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
     let tsStudentInstances = [];
     let tsInstInstances = [];
+    let currentFeeFilter = 'all'; 
 
     async function handleWithdraw(event) {
         event.preventDefault();
@@ -231,17 +307,9 @@
         const fileInput = document.getElementById('exp_file');
         const file = fileInput.files[0];
 
-        if (!file) {
-            Swal.fire({icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกไฟล์รูปภาพสลิปก่อนครับ'});
-            return;
-        }
+        if (!file) { Swal.fire({icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกไฟล์รูปภาพสลิปก่อนครับ'}); return; }
 
-        const expData = {
-            date: document.getElementById('exp_date').value,
-            name: document.getElementById('exp_name').value,
-            amount: document.getElementById('exp_amt').value,
-            desc: document.getElementById('exp_desc').value
-        };
+        const expData = { date: document.getElementById('exp_date').value, name: document.getElementById('exp_name').value, amount: document.getElementById('exp_amt').value, desc: document.getElementById('exp_desc').value };
 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>⏳ กำลังอัปโหลด...';
@@ -249,17 +317,8 @@
         try {
             const base64Str = await compressImage(file);
             const base64Data = base64Str.split(',')[1];
-            
-            const payload = { 
-                action: 'uploadImage', 
-                payload: { 
-                    base64: base64Data, 
-                    mimeType: 'image/jpeg', 
-                    fileName: "Slip_" + expData.name + "_" + Date.now() + ".jpg" 
-                } 
-            };
-
-            const res = await fetch(API_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(payload) });
+            const payload = { action: 'uploadImage', payload: { base64: base64Data, mimeType: 'image/jpeg', fileName: "Slip_" + expData.name + "_" + Date.now() + ".jpg" } };
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
 
             if(data.status === 'success') {
@@ -274,15 +333,9 @@
                 
                 addToQueue({ type:'add', sheetName:'Expense', values:vals });
                 Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'ส่งคำขอเบิกเงินสำเร็จ!', showConfirmButton: false, timer: 1500});
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (err) {
-            Swal.fire({ title: 'เกิดข้อผิดพลาด', text: "ระบบขัดข้อง: " + err.toString(), icon: 'error' });
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "ส่งคำขอเบิกเงิน";
-        }
+            } else { throw new Error(data.message); }
+        } catch (err) { Swal.fire({ title: 'เกิดข้อผิดพลาด', text: "ระบบขัดข้อง: " + err.toString(), icon: 'error' }); } 
+        finally { btn.disabled = false; btn.innerText = "ส่งคำขอเบิกเงิน"; }
     }
 
     async function compressImage(file, maxWidth = 1000) {
@@ -318,13 +371,7 @@
             document.getElementById('adminBtn').innerHTML = '<i class="fas fa-lock"></i> <span class="d-none d-sm-inline ms-1">เข้าสู่โหมด Admin</span>';
             renderAll();
         } else {
-            const { value: password } = await Swal.fire({
-                title: 'Admin Login',
-                input: 'password',
-                inputPlaceholder: 'ใส่รหัสผ่าน...',
-                showCancelButton: true
-            });
-
+            const { value: password } = await Swal.fire({ title: 'Admin Login', input: 'password', inputPlaceholder: 'ใส่รหัสผ่าน...', showCancelButton: true });
             if (password) {
                 Swal.fire({ title: 'กำลังตรวจสอบ...', didOpen: () => Swal.showLoading() });
                 try {
@@ -336,27 +383,24 @@
                         document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>';
                         renderAll();
                         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Login สำเร็จ!', showConfirmButton: false, timer: 1500 });
-                    } else {
-                        Swal.fire('รหัสไม่ถูกต้อง', '', 'error');
-                    }
-                } catch (e) {
-                    Swal.fire('การเชื่อมต่อล้มเหลว', '', 'error');
-                }
+                    } else { Swal.fire('รหัสไม่ถูกต้อง', '', 'error'); }
+                } catch (e) { Swal.fire('การเชื่อมต่อล้มเหลว', '', 'error'); }
             }
         }
     }
 
+    // 🚩 กรองให้ Dropdown เลือกได้เฉพาะเด็ก Active
     function initTomSelect() {
-        tsStudentInstances.forEach(ts => ts.destroy());
-        tsInstInstances.forEach(ts => ts.destroy());
+        tsStudentInstances.forEach(ts => ts.destroy()); tsInstInstances.forEach(ts => ts.destroy());
         tsStudentInstances = []; tsInstInstances = [];
-        const stdOptions = (ALL_DATA.students || []).map(s => { const val = (typeof s === 'object') ? s.name : s; return { value: val, text: val }; }).filter(s => s.value);
+        
+        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
 
         document.querySelectorAll('.student-dropdown').forEach(el => {
-            let ts = new TomSelect(el, { valueField:'value', labelField:'text', searchField:'text', options:stdOptions, create: function(input) {
-                if(!ALL_DATA.students) ALL_DATA.students = []; ALL_DATA.students.push({name: input});
-                addToQueue({ type:'add', sheetName:'Students', values:[input] }); setTimeout(updateDropdowns, 100); return { value: input, text: input };
+            let ts = new TomSelect(el, { valueField:'value', labelField:'text', searchField:'text', options:activeStdOptions, create: function(input) {
+                if(!ALL_DATA.students) ALL_DATA.students = []; ALL_DATA.students.push({name: input, status: 'Active'});
+                addToQueue({ type:'add', sheetName:'Students', values:[input, 'Active'] }); setTimeout(updateDropdowns, 100); return { value: input, text: input };
             }, render:{option_create:(data,escape)=>'<div class="create">เพิ่ม <strong>'+escape(data.input)+'</strong></div>'} });
             tsStudentInstances.push(ts);
         });
@@ -371,33 +415,25 @@
     }
 
     function updateDropdowns() {
-        const stdOptions = (ALL_DATA.students || []).map(s => { const val = (typeof s === 'object') ? s.name : s; return { value: val, text: val }; }).filter(s => s.value);
+        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
-        tsStudentInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(stdOptions); if(v) ts.setValue(v); });
+        tsStudentInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(activeStdOptions); if(v) ts.setValue(v); });
         tsInstInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(instOptions); if(v) ts.setValue(v); });
     }
 
     function checkOther(sel) { document.getElementById('abs_other').style.display = (sel.value==='อื่นๆ') ? 'block' : 'none'; }
-    
-    function addToQueue(item) { 
-        syncQueue.push(item); 
-        localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
-        processSync(); 
-    }
+    function addToQueue(item) { syncQueue.push(item); localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); processSync(); }
     
     async function processSync() {
         if(syncQueue.length === 0) return;
         document.getElementById('syncToast').style.display = 'block';
         const batch = [...syncQueue]; syncQueue = [];
         try {
-            const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'sync', payload: batch }) });
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'sync', payload: batch }) });
             const data = await res.json();
             if(data.status === 'error') throw new Error(data.message);
             localStorage.removeItem('st_sync_queue');
-        } catch(e) { 
-            syncQueue = [...batch, ...syncQueue]; 
-            localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); 
-        }
+        } catch(e) { syncQueue = [...batch, ...syncQueue]; localStorage.setItem('st_sync_queue', JSON.stringify(syncQueue)); }
         document.getElementById('syncToast').style.display = 'none';
     }
 
@@ -432,95 +468,190 @@
     
     function saveEdit(btn, sheet, id, col) { 
         const val = btn.previousElementSibling.value; 
-        const td = btn.closest('td'); 
-        td.innerText = val; 
-        td.ondblclick = () => makeEditable(td, sheet, id, col); 
-        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); 
-        if(item) item[col] = val; 
+        const td = btn.closest('td'); td.innerText = val; td.ondblclick = () => makeEditable(td, sheet, id, col); 
+        const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); if(item) item[col] = val; 
         addToQueue({ type:'update', sheetName:sheet, id, columnName:col, newValue:val }); 
     }
     
     function upStatus(sheet, id, st) { 
         const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); 
-        if(item) { 
-            item.status = st; 
-            renderAll(); 
-            addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); 
-        } 
+        if(item) { item.status = st; renderAll(); addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); } 
     }
     
     function delRec(sheet, id) { Swal.fire({ title: 'ลบข้อมูลนี้?', icon: 'warning', showCancelButton: true }).then((r) => { if (r.isConfirmed) { ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id); renderAll(); addToQueue({ type:'delete', sheetName:sheet, id }); } }); }
 
+    // 🚩 ฟังก์ชันจัดการสมาชิก (เข้า/ออก)
+    function changeStudentStatus(name, newStatus) {
+        const student = ALL_DATA.students.find(s => s.name === name);
+        if(student) {
+            student.status = newStatus;
+            addToQueue({ type:'update', sheetName:'Students', id: name, columnName:'status', newValue: newStatus });
+            updateDropdowns(); renderMembers(); renderFeeTable();
+        }
+    }
+
+    function renderMembers() {
+        if(!document.querySelector('#tableActive tbody')) return;
+        const activeList = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned');
+        const resignedList = (ALL_DATA.students || []).filter(s => s.status === 'Resigned');
+
+        document.querySelector('#tableActive tbody').innerHTML = activeList.map(s => `<tr><td class="fw-bold">${s.name}</td><td class="text-end admin-only"><button class="btn btn-sm btn-outline-danger" onclick="changeStudentStatus('${s.name}', 'Resigned')"><i class="fas fa-ban me-1"></i>ให้ออก</button></td></tr>`).join('');
+        document.querySelector('#tableResigned tbody').innerHTML = resignedList.map(s => `<tr class="resigned-row"><td>${s.name}</td><td class="text-end admin-only"><button class="btn btn-sm btn-outline-success" onclick="changeStudentStatus('${s.name}', 'Active')"><i class="fas fa-undo me-1"></i>ดึงกลับ</button></td></tr>`).join('');
+    }
+
+    // 🚩 ฟังก์ชันสร้างและคัดกรองบิลเก็บเงิน
+    async function handleCreateCampaign(e) {
+        e.preventDefault();
+        const campId = Date.now();
+        const type = document.getElementById('camp_type').value;
+        const title = document.getElementById('camp_title').value;
+        const amt = document.getElementById('camp_amt').value;
+        const dateCreated = new Date().toISOString().split('T')[0];
+
+        const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => s.name);
+        if(activeStudents.length === 0) return Swal.fire('แจ้งเตือน', 'ไม่มีรายชื่อสมาชิกในระบบ', 'warning');
+
+        const campaignData = [campId, type, title, amt, dateCreated];
+        const paymentsData = activeStudents.map(name => [campId + "_" + name, campId, name, '❌', '']);
+
+        ALL_DATA.feecampaigns.push({id: campId, type, title, amount: amt, date_created: dateCreated});
+        paymentsData.forEach(p => ALL_DATA.feepayments.push({id: p[0], campaign_id: p[1], student_name: p[2], status: p[3], pay_date: p[4]}));
+
+        document.getElementById('btnCamp').innerText = "กำลังประมวลผล..."; document.getElementById('btnCamp').disabled = true;
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'createCampaign', payload: { campaignData, paymentsData } }) });
+            Swal.fire('สำเร็จ!', 'สร้างรอบและใบแจ้งเก็บเงินเรียบร้อย', 'success'); e.target.reset(); renderFeeSelect();
+        } catch(err) { Swal.fire('เกิดข้อผิดพลาด', err.toString(), 'error'); }
+        document.getElementById('btnCamp').innerText = "สร้างบิลให้สมาชิกทุกคน"; document.getElementById('btnCamp').disabled = false;
+    }
+
+    function filterCampaignType(type) {
+        currentFeeFilter = type;
+        document.querySelectorAll('[id^="btnFilter"]').forEach(btn => btn.classList.remove('active'));
+        if(type === 'all') document.getElementById('btnFilterAll').classList.add('active');
+        else if(type === 'เงินกองกลางวง') document.getElementById('btnFilterPool').classList.add('active');
+        else document.getElementById('btnFilterOther').classList.add('active');
+        renderFeeSelect();
+    }
+
+    function renderFeeSelect() {
+        const sel = document.getElementById('select_campaign');
+        const oldVal = sel.value; sel.innerHTML = '<option value="">-- เลือกรอบการเก็บเงิน --</option>';
+        
+        let filteredCamps = ALL_DATA.feecampaigns || [];
+        if(currentFeeFilter !== 'all') filteredCamps = filteredCamps.filter(c => c.type === currentFeeFilter);
+
+        filteredCamps.slice().reverse().forEach(c => { sel.innerHTML += `<option value="${c.id}">[${c.type}] ${c.title} - ยอด ${c.amount} บาท</option>`; });
+        if(oldVal) sel.value = oldVal; renderFeeTable();
+    }
+
+    function renderFeeTable() {
+        const campId = document.getElementById('select_campaign').value;
+        if(!campId) { document.querySelector('#tableFee tbody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">กรุณาเลือกรอบการเก็บเงินด้านบน</td></tr>'; document.getElementById('fee_summary').innerHTML = ''; return; }
+
+        const camp = ALL_DATA.feecampaigns.find(c => c.id == campId);
+        let pays = (ALL_DATA.feepayments || []).filter(p => p.campaign_id == campId);
+        pays = pays.filter(p => ALL_DATA.students.find(s => s.name === p.student_name && s.status !== 'Resigned')); // ดึงเฉพาะคน Active
+
+        const paidCount = pays.filter(p => p.status === '✔️').length;
+        document.getElementById('fee_summary').innerHTML = `<span>ยอดที่เรียกเก็บ: ${camp.amount} บ./คน</span> <span>ยอดที่ชำระแล้ว: <span class="text-success">${paidCount}/${pays.length}</span> คน</span>`;
+
+        document.querySelector('#tableFee tbody').innerHTML = pays.map(p => {
+            let btnClass = 'unpaid'; let btnText = '❌ ยังไม่จ่าย';
+            if (p.status === '✔️') { btnClass = 'paid'; btnText = '✔️ จ่ายแล้ว'; }
+            else if (p.status === '✨') { btnClass = 'exempt'; btnText = '✨ ไม่ต้องจ่าย'; }
+
+            return `<tr>
+                <td class="fw-bold text-start">${p.student_name}</td>
+                <td><small class="text-muted">${p.pay_date ? formatThaiDate(p.pay_date) : '-'}</small></td>
+                <td class="text-center"><button class="btn-check-pay ${btnClass} w-100" onclick="openPaymentMenu('${p.id}', '${p.student_name}', '${campId}', '${camp.type}')">${btnText}</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // 🚩 ฟังก์ชันหัวใจหลัก: ระบบเปลี่ยนสถานะ 3 แบบ (เคลียร์ย้อนหลังอัตโนมัติ)
+    function openPaymentMenu(payId, studentName, campId, campType) {
+        if(!isAdm()) return Swal.fire('สิทธิ์ไม่เพียงพอ', 'เฉพาะ Admin เท่านั้นที่สามารถอัปเดตสถานะเงินได้ครับ', 'warning');
+
+        // ค้นหาประวัติก่อนหน้าประเภทเดียวกัน
+        let priorRecords = ALL_DATA.feepayments.filter(p => p.student_name === studentName && p.campaign_id < campId && ALL_DATA.feecampaigns.find(c => c.id == p.campaign_id && c.type === campType));
+        
+        // เช็คว่าเด็กคนนี้มีสิทธิ์กดปุ่มสีฟ้า ✨ ไหม (ถ้าเคยจ่าย/หรือเคยติดสีฟ้ามาแล้ว จะไม่มีปุ่มนี้ให้กด)
+        let canBeExempt = true;
+        if (priorRecords.some(p => p.status === '✔️' || p.status === '✨')) canBeExempt = false;
+
+        Swal.fire({
+            title: `จัดการบิลของ ${studentName}`,
+            showCancelButton: true,
+            showDenyButton: canBeExempt,
+            confirmButtonColor: '#2e7d32', denyButtonColor: '#00838f', cancelButtonColor: '#d32f2f',
+            confirmButtonText: '✔️ จ่ายแล้ว', denyButtonText: '✨ ไม่ต้องจ่าย (เด็กใหม่)', cancelButtonText: '❌ ยังไม่จ่าย'
+        }).then((result) => {
+            if(result.isDismissed && result.dismiss !== Swal.DismissReason.cancel) return; 
+
+            let newStatus = '❌'; let payDate = '';
+
+            if (result.isConfirmed) { // กดยืนยันจ่าย
+                let unpaidPrior = priorRecords.find(p => p.status === '❌');
+                if (unpaidPrior) {
+                    let priorCamp = ALL_DATA.feecampaigns.find(c => c.id == unpaidPrior.campaign_id);
+                    return Swal.fire('ติดค้างยอดเก่า!', `กรุณาเคลียร์ <b>${priorCamp.title}</b> ก่อนรับยอดรอบนี้ครับ`, 'warning');
+                }
+                newStatus = '✔️'; payDate = new Date().toISOString().split('T')[0];
+            } 
+            else if (result.isDenied) { // กดเด็กใหม่ (✨)
+                newStatus = '✨'; payDate = new Date().toISOString().split('T')[0];
+                // 🚀 ลอจิกพิเศษ: วิ่งเคลียร์ยอด ❌ ของรอบเก่าทั้งหมดให้กลายเป็น ✨ ให้อัตโนมัติ!
+                priorRecords.filter(p => p.status === '❌').forEach(p => {
+                    p.status = '✨'; p.pay_date = payDate;
+                    addToQueue({type:'update', sheetName:'FeePayments', id:p.id, columnName:'status', newValue:'✨'});
+                    addToQueue({type:'update', sheetName:'FeePayments', id:p.id, columnName:'pay_date', newValue:payDate});
+                });
+            } 
+            else if (result.dismiss === Swal.DismissReason.cancel) { newStatus = '❌'; payDate = ''; } // กลับเป็นยังไม่จ่าย
+
+            // อัปเดตของรอบปัจจุบัน
+            let currentPay = ALL_DATA.feepayments.find(p => p.id == payId);
+            currentPay.status = newStatus; currentPay.pay_date = payDate;
+            addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'status', newValue:newStatus});
+            addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'pay_date', newValue:payDate});
+            
+            renderFeeTable();
+        });
+    }
+
     function renderAll() {
         if(isAdm()) { document.body.classList.add('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-unlock"></i> <span class="d-none d-sm-inline ms-1">ออกจาก Admin</span>'; }
+        else { document.body.classList.remove('is-admin'); document.getElementById('adminBtn').innerHTML = '<i class="fas fa-lock"></i> <span class="d-none d-sm-inline ms-1">เข้าสู่โหมด Admin</span>'; }
         
-        // 🚩 ฟังก์ชันสร้างแถวตารางแบบ Dynamic ปรับเงื่อนไขสี และสิทธิ์การแก้ไขให้ตรงเงื่อนไขใหม่ของคุณ
         const bR = (data, sheet, cols, editableCol) => (data || []).slice().reverse().map(r => {
-            const isPending = r.status === 'pending';
-            const statusClass = isPending ? 'bg-danger text-white' : 'bg-success text-white';
-            const statusText = isPending ? 'รอตรวจ' : 'ผ่าน';
-            
-            return `<tr>
-                <td class="fw-bold">${formatThaiDate(r.date)}</td>
-                <td>${r.name}</td>
-                <td><span class="badge bg-secondary">${r.role||'-'}</span></td>
-                ${cols.map(c => {
-                    if (c === editableCol) {
-                        return `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c]||'-'}</td>`;
-                    } else {
-                        return `<td>${r[c]||'-'}</td>`;
-                    }
-                }).join('')}
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td class="admin-only">
-                    ${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}
-                    <button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>`;
+            const isPending = r.status === 'pending'; const statusClass = isPending ? 'bg-danger text-white' : 'bg-success text-white'; const statusText = isPending ? 'รอตรวจ' : 'ผ่าน';
+            return `<tr><td class="fw-bold">${formatThaiDate(r.date)}</td><td>${r.name}</td><td><span class="badge bg-secondary">${r.role||'-'}</span></td>${cols.map(c => { if (c === editableCol) return `<td class="editable" ondblclick="makeEditable(this,'${sheet}','${r.id}','${c}')">${r[c]||'-'}</td>`; else return `<td>${r[c]||'-'}</td>`; }).join('')}<td><span class="status-badge ${statusClass}">${statusText}</span></td><td class="admin-only">${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}<button class="btn btn-sm btn-danger" onclick="delRec('${sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
         }).join('');
 
-        // วาดตารางตามคอลัมน์และกำหนดสิทธิ์แก้ไขข้อมูลเฉพาะจุดที่ต้องการ (ชื่อคนห้ามแก้)
-        document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['note'], 'note'); // แก้ไขเหตุผลได้
-        document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail'], 'detail'); // แก้รายละเอียดวินัยได้
-        document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note'); // แก้เหตุผลขาดซ้อมได้
+        if(document.querySelector('#tableLate tbody')) document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['note'], 'note');
+        if(document.querySelector('#tableMisc tbody')) document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail'], 'detail');
+        if(document.querySelector('#tableAbsent tbody')) document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note');
         
-        // ตารางการเงิน
         const fR = [...(ALL_DATA.income || []).map(i => ({...i, sheet: 'Income', act: 'รายรับ', col: 'success'})), ...(ALL_DATA.expense || []).map(e => ({...e, sheet: 'Expense', act: 'เบิกเงิน', col: 'danger'}))].sort((a,b) => new Date(a.date) - new Date(b.date));
-        document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => {
-            const isPending = r.status === 'pending';
-            const statusClass = isPending ? 'bg-danger text-white' : 'bg-success text-white';
-            const statusText = isPending ? 'รอตรวจ' : 'อนุมัติ';
-            
-            return `<tr>
-                <td>${formatThaiDate(r.date)}</td>
-                <td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td>
-                <td>${r.person || r.name}</td>
-                <td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td>
-                <td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td class="admin-only">
-                    ${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}
-                    <button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>`;
-        }).join('');
+        if(document.querySelector('#tableFinance tbody')) document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => { const isPending = r.status === 'pending'; return `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${isPending ? 'bg-danger text-white' : 'bg-success text-white'}">${isPending ? 'รอตรวจ' : 'อนุมัติ'}</span></td><td class="admin-only">${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','${r.id}','approved')"><i class="fas fa-check"></i></button> ` : ''}<button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('');
         
-        renderWeekly(); calculateFinance(); renderStats();
+        renderWeekly(); calculateFinance(); renderStats(); renderMembers(); renderFeeSelect();
     }
 
     function renderWeekly() {
+        if(!document.querySelector('#tableWeekly tbody')) return;
         const w = {}; const now = new Date(); const sW = new Date(now); sW.setDate(now.getDate() - (now.getDay() || 7) + 1); sW.setHours(0,0,0,0);
         (ALL_DATA.late || []).forEach(r => { const d = new Date(r.date); if(d >= sW) { const n = r.name; const x = (d.getDay() || 7) - 1; if(!w[n]) w[n] = [0,0,0,0,0,0,0]; w[n][x]++; }});
         document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(w).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td>${w[n].map(c => `<td>${c||'-'}</td>`).join('')}<td class="fw-bold text-danger">${w[n].reduce((a,b)=>a+b,0)}</td></tr>`).join('');
     }
-    
     function calculateFinance() {
-        let inc = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0);
-        let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
+        if(!document.getElementById('f-in')) return;
+        let inc = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0); let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
         document.getElementById('f-in').innerText = '฿'+inc.toLocaleString(); document.getElementById('f-out').innerText = '฿'+exp.toLocaleString(); document.getElementById('f-bal').innerText = '฿'+(inc-exp).toLocaleString();
     }
-    
     function renderStats() {
+        if(!document.querySelector('#tableTotal tbody')) return;
         const s = {}; const add = (l, k) => (l || []).forEach(r => { const n = r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][k]++; });
         add(ALL_DATA.late, 'l'); add(ALL_DATA.misconduct, 'm'); add(ALL_DATA.absent, 'a');
         document.querySelector('#tableTotal tbody').innerHTML = Object.keys(s).sort().map(n => `<tr><td class="fw-bold text-start">${n}</td><td>${s[n].l}</td><td>${s[n].m}</td><td>${s[n].a}</td><td class="table-dark fw-bold">${s[n].l+s[n].m+s[n].a}</td></tr>`).join('');
@@ -529,9 +660,7 @@
     async function init() {
         try {
             const res = await fetch(API_URL + '?action=getAll&t=' + Date.now());
-            
-            const data = await res.json();
-            ALL_DATA = { ...ALL_DATA, ...data };
+            const data = await res.json(); ALL_DATA = { ...ALL_DATA, ...data };
             initTomSelect(); renderAll();
         } catch(e) { Swal.fire({title: 'โหลดข้อมูลล้มเหลว', text: 'เช็คอินเทอร์เน็ตหรือลิงก์ API', icon: 'error'}); }
         finally { document.getElementById('mainLoader').style.display = 'none'; }

@@ -389,12 +389,12 @@
         }
     }
 
-    // 🚩 กรองให้ Dropdown เลือกได้เฉพาะเด็ก Active
+    // 🚩 กรองให้ Dropdown เลือกได้เฉพาะเด็ก Active (ป้องกันแถวว่างหลุดมาในเมนูเลือกชื่อ)
     function initTomSelect() {
         tsStudentInstances.forEach(ts => ts.destroy()); tsInstInstances.forEach(ts => ts.destroy());
         tsStudentInstances = []; tsInstInstances = [];
         
-        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
+        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.name && s.name.trim() !== '' && s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
 
         document.querySelectorAll('.student-dropdown').forEach(el => {
@@ -417,7 +417,7 @@
     }
 
     function updateDropdowns() {
-        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
+        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.name && s.name.trim() !== '' && s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
         tsStudentInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(activeStdOptions); if(v) ts.setValue(v); });
         tsInstInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(instOptions); if(v) ts.setValue(v); });
@@ -510,7 +510,8 @@
         const amt = document.getElementById('camp_amt').value;
         const dateCreated = new Date().toISOString().split('T')[0];
 
-        const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => s.name);
+        // 🚀 ปรับปรุงจุดนี้: คัดกรองเอาเฉพาะนักเรียนที่ Active และ "ชื่อไม่เป็นค่าว่าง" เท่านั้นก่อนสร้างบิลส่งไป Google Sheets เพื่อไม่ให้เกิดแถวบิลว่างขึ้นอีกในอนาคต
+        const activeStudents = (ALL_DATA.students || []).filter(s => s.name && s.name.trim() !== '' && s.status !== 'Resigned').map(s => s.name);
         if(activeStudents.length === 0) return Swal.fire('แจ้งเตือน', 'ไม่มีรายชื่อสมาชิกในระบบ', 'warning');
 
         const campaignData = [campId, type, title, amt, dateCreated];
@@ -553,7 +554,10 @@
 
         const camp = ALL_DATA.feecampaigns.find(c => c.id == campId);
         let pays = (ALL_DATA.feepayments || []).filter(p => p.campaign_id == campId);
-        pays = pays.filter(p => ALL_DATA.students.find(s => s.name === p.student_name && s.status !== 'Resigned')); // ดึงเฉพาะคน Active
+        
+        // 🚀 แก้ไขจุดนี้ (หัวใจหลัก): กรองรายชื่อในตารางรับเงินรอบประวัติเก่าออกด้วย โดยเช็คว่า p.student_name ต้องมีค่า และต้องแมตช์เจอในรายชื่อนักเรียนที่เป็น Active เท่านั้น แถวว่างจึงจะหายไปทันที
+        pays = pays.filter(p => p.student_name && p.student_name.trim() !== '');
+        pays = pays.filter(p => ALL_DATA.students.find(s => s.name === p.student_name && s.status !== 'Resigned'));
 
         const paidCount = pays.filter(p => p.status === '✔️').length;
         document.getElementById('fee_summary').innerHTML = `<span>ยอดที่เรียกเก็บ: ${camp.amount} บ./คน</span> <span>ยอดที่ชำระแล้ว: <span class="text-success">${paidCount}/${pays.length}</span> คน</span>`;
@@ -664,9 +668,21 @@
             const res = await fetch(API_URL + '?action=getAll&t=' + Date.now());
             const data = await res.json(); ALL_DATA = { ...ALL_DATA, ...data };
             
-            // 🚀 แก้ไขจุดนี้: กรองรายชื่อแถวว่างที่มาจากระบบจัดกลุ่มใน Google Sheets ออกทันทีก่อนนำไปประมวลผลต่อ
+            // 🚀 แก้ไขและเพิ่มจุดนี้: ขยายการกรองรายชื่อ/แถวว่างออกทันทีตั้งแต่กระบวนการดึงข้อมูลเริ่มต้น เพื่อให้ทุก ๆ Module สะอาด 100%
             if (ALL_DATA.students) {
                 ALL_DATA.students = ALL_DATA.students.filter(s => s.name && s.name.trim() !== '');
+            }
+            if (ALL_DATA.feepayments) {
+                ALL_DATA.feepayments = ALL_DATA.feepayments.filter(p => p.student_name && p.student_name.trim() !== '');
+            }
+            if (ALL_DATA.late) {
+                ALL_DATA.late = ALL_DATA.late.filter(r => r.name && r.name.trim() !== '');
+            }
+            if (ALL_DATA.misconduct) {
+                ALL_DATA.misconduct = ALL_DATA.misconduct.filter(r => r.name && r.name.trim() !== '');
+            }
+            if (ALL_DATA.absent) {
+                ALL_DATA.absent = ALL_DATA.absent.filter(r => r.name && r.name.trim() !== '');
             }
             
             initTomSelect(); renderAll();

@@ -65,14 +65,12 @@
         .tab-pane.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 🚩 ดีไซน์ปุ่มสถานะเงินและแถบคนออก เพิ่มเติมให้เข้ากับธีมคุณ */
         .btn-check-pay { border-radius: 20px; padding: 5px 15px; font-weight: 600; font-size: 0.85rem; border: 2px solid transparent; transition: 0.2s; }
         .btn-check-pay.unpaid { background: #ffebee; color: #d32f2f; border-color: #d32f2f; }
         .btn-check-pay.paid { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
         .btn-check-pay.exempt { background: #e0f7fa; color: #00838f; border-color: #00838f; }
         .resigned-row { background-color: #e9ecef !important; color: #6c757d; opacity: 0.7; }
 
-        /* 🚩 เพิ่มเติม CSS สำหรับตารางดึงล็อกชื่อคอลัมน์ซ้ายสุด (Sticky Column) */
         .matrix-container { max-height: 550px; overflow: auto; border: 1px solid #dee2e6; border-radius: 8px; }
         .table-matrix thead th { position: sticky; top: 0; background-color: var(--navy) !important; color: white; z-index: 10; box-shadow: inset 0 -1px 0 #dee2e6; }
         .table-matrix tbody td.sticky-student, .table-matrix thead th.sticky-student { position: sticky; left: 0; background-color: #ffffff; z-index: 9; font-weight: 600; border-right: 2px solid #dee2e6 !important; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
@@ -249,7 +247,7 @@
                         </div>
 
                         <select id="select_campaign" class="form-select mb-3 border-primary" onchange="renderFeeTable()">
-                            <option value="">-- เลือกรอบการเก็บเงิน --</option>
+                            <option value="">--เลือกรอบการเก็บเงิน --</option>
                         </select>
                         <div class="d-flex justify-content-between mb-2 fw-bold" style="color:var(--navy);" id="fee_summary"></div>
                         <div class="table-responsive">
@@ -325,7 +323,7 @@
 </div>
 
 <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxy55QJTdSL4nMSGAgaIWPjrXIwJUmgJkh_g2BHyQBNefBXPDredCWW4JwxaCGOAMqzrA/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwtNy7sdFCieb7RuJ_e9MnxwCze39Mn-mwiZTGWDjHbpULFQsyG0DPlpbzu3X60urX-Ng/exec';
     
     let ALL_DATA = { late:[], misconduct:[], absent:[], expense:[], income:[], students:[], instruments:[], feecampaigns:[], feepayments:[] };
     let syncQueue = JSON.parse(localStorage.getItem('st_sync_queue') || '[]');
@@ -508,7 +506,28 @@
     
     function upStatus(sheet, id, st) { 
         const item = ALL_DATA[sheet.toLowerCase()].find(i => i.id == id); 
-        if(item) { item.status = st; renderAll(); addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); } 
+        if(item) { 
+            item.status = st; 
+            renderAll(); 
+            addToQueue({ type:'update', sheetName:sheet, id, columnName:'status', newValue:st }); 
+        } 
+    }
+
+    function approveFinanceExpense(id) {
+        Swal.fire({
+            title: 'ยืนยันการอนุมัติยอดเบิก?',
+            text: "ระบบจะปรับสถานะรายการนี้เป็นอนุมัติและหักยอดเงินในระบบกลาง",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: '✅ อนุมัติ',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                upStatus('Expense', id, 'approved');
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อนุมัติรายการเรียบร้อย!', showConfirmButton: false, timer: 1500});
+            }
+        });
     }
     
     function delRec(sheet, id) { Swal.fire({ title: 'ลบข้อมูลนี้?', icon: 'warning', showCancelButton: true }).then((r) => { if (r.isConfirmed) { ALL_DATA[sheet.toLowerCase()] = ALL_DATA[sheet.toLowerCase()].filter(i => i.id != id); renderAll(); addToQueue({ type:'delete', sheetName:sheet, id }); } }); }
@@ -537,7 +556,6 @@
         const type = document.getElementById('camp_type').value;
         const title = document.getElementById('camp_title').value;
         const amt = document.getElementById('camp_amt').value;
-        // 🚩 ดึงวันที่จากฟิลด์ input ที่เพิ่มเข้ามาใหม่
         const dateCreated = document.getElementById('camp_date').value || new Date().toISOString().split('T')[0];
 
         const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => s.name);
@@ -569,7 +587,7 @@
     function renderFeeSelect() {
         const sel = document.getElementById('select_campaign');
         if(!sel) return;
-        const oldVal = sel.value; sel.innerHTML = '<option value="">-- เล เลือกรอบการเก็บเงิน --</option>';
+        const oldVal = sel.value; sel.innerHTML = '<option value="">-- เลือกรอบการเก็บเงิน --</option>';
         
         let filteredCamps = ALL_DATA.feecampaigns || [];
         if(currentFeeFilter !== 'all') filteredCamps = filteredCamps.filter(c => c.type === currentFeeFilter);
@@ -648,7 +666,6 @@
         });
     }
 
-    // 🚩 ฟังก์ชันสร้างและเรนเดอร์ตารางภาพรวม Matrix (คัดแยกประเภทกองกลางขึ้นก่อน)
     function renderMatrixSummary() {
         const table = document.getElementById('tableMatrixSummary');
         if (!table) return;
@@ -656,11 +673,10 @@
         const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').sort((a,b) => a.name.localeCompare(b.name, 'th'));
         const campaigns = ALL_DATA.feecampaigns || [];
 
-        // คัดแยกเรียงลำดับ: เงินกองกลางวง ขึ้นก่อน ตามด้วย ค่าอื่นๆ
         const sortedCampaigns = [...campaigns].sort((a, b) => {
             if (a.type === 'เงินกองกลางวง' && b.type !== 'เงินกองกลางวง') return -1;
             if (a.type !== 'เงินกองกลางวง' && b.type === 'เงินกองกลางวง') return 1;
-            return a.id - b.id; // เรียงตามรอบเก่าไปใหม่
+            return a.id - b.id;
         });
 
         if (activeStudents.length === 0 || sortedCampaigns.length === 0) {
@@ -668,7 +684,6 @@
             return;
         }
 
-        // 1. เรนเดอร์หัวตาราง (Thead)
         let theadHtml = `<tr><th class="sticky-student">รายชื่อนักเรียน</th>`;
         sortedCampaigns.forEach(c => {
             theadHtml += `<th>${c.title}<br><span class="badge bg-light text-dark font-monospace fw-normal mt-1">฿${Number(c.amount).toLocaleString()}</span></th>`;
@@ -676,7 +691,6 @@
         theadHtml += `</tr>`;
         table.querySelector('thead').innerHTML = theadHtml;
 
-        // 2. เรนเดอร์ข้อมูลนักเรียนแต่ละแถว (Tbody)
         let tbodyHtml = "";
         activeStudents.forEach(student => {
             tbodyHtml += `<tr><td class="text-start sticky-student">${student.name}</td>`;
@@ -684,7 +698,7 @@
             sortedCampaigns.forEach(camp => {
                 const payment = (ALL_DATA.feepayments || []).find(p => p.campaign_id == camp.id && p.student_name === student.name);
                 
-                let icon = "❌"; // default mapping
+                let icon = "❌"; 
                 if (payment) {
                     if (payment.status === '✔️') icon = "✅";
                     else if (payment.status === '✨') icon = "➖";
@@ -703,7 +717,6 @@
         tbodyElement.innerHTML = tbodyHtml;
     }
 
-    // 🚩 ฟังก์ชันส่งออกไฟล์ Excel (.csv) รองรับภาษาไทยเปิดใน Excel ได้ 100%
     function exportMatrixToExcel() {
         const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').sort((a,b) => a.name.localeCompare(b.name, 'th'));
         const campaigns = ALL_DATA.feecampaigns || [];
@@ -717,15 +730,12 @@
             return Swal.fire('ไม่สามารถดาวน์โหลดได้', 'ไม่มีข้อมูลสำหรับ Export', 'warning');
         }
 
-        // ใส่ UTF-8 BOM สำหรับให้ Excel อ่านภาษาไทยและอีโมจิได้สมบูรณ์
         let csvContent = "\uFEFF"; 
         
-        // บรรทัดหัวคอลัมน์
         let headers = ["รายชื่อนักเรียน"];
         sortedCampaigns.forEach(c => { headers.push(`${c.title} (${c.amount} บาท)`); });
         csvContent += headers.map(h => `"${h}"`).join(",") + "\r\n";
 
-        // บรรทัดข้อมูล
         activeStudents.forEach(student => {
             let row = [student.name];
             sortedCampaigns.forEach(camp => {
@@ -740,7 +750,6 @@
             csvContent += row.map(r => `"${r}"`).join(",") + "\r\n";
         });
 
-        // ดำเนินการสร้างลิงก์ดาวน์โหลด
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const dateStr = new Date().toISOString().split('T')[0];
@@ -749,6 +758,13 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        let summaryRow = ["รวม (จำนวนคนที่จ่าย)"];
+        sortedCampaigns.forEach(camp => {
+            const paidCount = (ALL_DATA.feepayments || []).filter(p => p.campaign_id == camp.id && p.status === '✔️').length;
+            summaryRow.push(paidCount + " คน");
+        });
+        csvContent += summaryRow.map(r => `"${r}"`).join(",") + "\r\n";
     }
 
     function renderAll() {
@@ -765,7 +781,26 @@
         if(document.querySelector('#tableAbsent tbody')) document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note');
         
         const fR = [...(ALL_DATA.income || []).map(i => ({...i, sheet: 'Income', act: 'รายรับ', col: 'success'})), ...(ALL_DATA.expense || []).map(e => ({...e, sheet: 'Expense', act: 'เบิกเงิน', col: 'danger'}))].sort((a,b) => new Date(a.date) - new Date(b.date));
-        if(document.querySelector('#tableFinance tbody')) document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => { const isPending = r.status === 'pending'; return `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td><span class="status-badge ${isPending ? 'bg-danger text-white' : 'bg-success text-white'}">${isPending ? 'รอตรวจ' : 'อนุมัติ'}</span></td><td class="admin-only">${isPending ? `<button class="btn btn-sm btn-success" onclick="upStatus('${r.sheet}','r.id','approved')"><i class="fas fa-check"></i></button> ` : ''}<button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('');
+        if(document.querySelector('#tableFinance tbody')) document.querySelector('#tableFinance tbody').innerHTML = fR.slice().reverse().map(r => { 
+            const isPending = r.status === 'pending' || r.status === 'approved'; 
+            const isActualPending = r.status === 'pending';
+            
+            let statusBadge = `<span class="status-badge bg-success text-white">อนุมัติ</span>`;
+            let actionBtn = '';
+            
+            if (r.sheet === 'Expense') {
+                if (isActualPending) {
+                    statusBadge = `<span class="status-badge bg-danger text-white">รอตรวจ</span>`;
+                    actionBtn = `<button class="btn btn-sm btn-success me-1" onclick="approveFinanceExpense('${r.id}')"><i class="fas fa-check"></i></button>`;
+                } else {
+                    statusBadge = `<span class="status-badge bg-success text-white">อนุมัติแล้ว</span>`;
+                }
+            } else {
+                statusBadge = `<span class="status-badge bg-success text-white">รับเงินแล้ว</span>`;
+            }
+
+            return `<tr><td>${formatThaiDate(r.date)}</td><td><span class="badge bg-${r.col}">${r.act}</span> ${r.desc}</td><td>${r.person || r.name}</td><td class="fw-bold">฿${Number(r.amount).toLocaleString()}</td><td>${r.slipUrl ? `<a href="${r.slipUrl}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i></a>` : '-'}</td><td>${statusBadge}</td><td class="admin-only">${actionBtn}<button class="btn btn-sm btn-danger" onclick="delRec('${r.sheet}','${r.id}')"><i class="fas fa-trash"></i></button></td></tr>`; 
+        }).join('');
         
         renderWeekly(); calculateFinance(); renderStats(); renderMembers(); renderFeeSelect(); renderMatrixSummary();
     }
@@ -776,11 +811,56 @@
         (ALL_DATA.late || []).forEach(r => { const d = new Date(r.date); if(d >= sW) { const n = r.name; const x = (d.getDay() || 7) - 1; if(!w[n]) w[n] = [0,0,0,0,0,0,0]; w[n][x]++; }});
         document.querySelector('#tableWeekly tbody').innerHTML = Object.keys(w).sort().map(n => `<tr><td class="text-start fw-bold">${n}</td>${w[n].map(c => `<td>${c||'-'}</td>`).join('')}<td class="fw-bold text-danger">${w[n].reduce((a,b)=>a+b,0)}</td></tr>`).join('');
     }
+
+    function renderAbsent() {
+        const tableBody = document.querySelector('#absentTable tbody'); 
+        if (!tableBody) return;
+
+        const list = ALL_DATA.absent || [];
+
+        tableBody.innerHTML = list.map(r => `
+            <tr>
+                <td>${r.id || '-'}</td>
+                <td>${r.date || '-'}</td>
+                <td class="fw-bold">${r.name || '-'}</td>
+                <td>${r.role || '-'}</td>
+                <td>${r.type || '-'}</td>
+                <td>${r.note || '-'}</td>
+                <td>
+                    <span class="badge ${r.status === 'approved' ? 'bg-success' : 'bg-warning text-dark'}">
+                        ${r.status === 'approved' ? 'อนุมัติแล้ว' : 'รอดำเนินการ'}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
     function calculateFinance() {
         if(!document.getElementById('f-in')) return;
-        let inc = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0); let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
-        document.getElementById('f-in').innerText = '฿'+inc.toLocaleString(); document.getElementById('f-out').innerText = '฿'+exp.toLocaleString(); document.getElementById('f-bal').innerText = '฿'+(inc-exp).toLocaleString();
+        
+        let normalIncome = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0); 
+        
+        let billIncome = 0;
+        if (ALL_DATA.feepayments && ALL_DATA.feecampaigns) {
+            (ALL_DATA.feepayments || []).forEach(p => {
+                if (p.status === '✔️') {
+                    const camp = ALL_DATA.feecampaigns.find(c => c.id == p.campaign_id);
+                    if (camp) {
+                        billIncome += Number(camp.amount);
+                    }
+                }
+            });
+        }
+
+        let inc = normalIncome + billIncome;
+        
+        let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
+        
+        document.getElementById('f-in').innerText = '฿' + inc.toLocaleString(); 
+        document.getElementById('f-out').innerText = '฿' + exp.toLocaleString(); 
+        document.getElementById('f-bal').innerText = '฿' + (inc - exp).toLocaleString();
     }
+
     function renderStats() {
         if(!document.querySelector('#tableTotal tbody')) return;
         const s = {}; const add = (l, k) => (l || []).forEach(r => { const n = r.name; if(!s[n]) s[n]={l:0,m:0,a:0}; s[n][k]++; });

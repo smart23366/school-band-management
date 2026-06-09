@@ -6,7 +6,7 @@
     <title>Saengthong Vitthaya Marching Band</title>
     
     <meta name="theme-color" content="#003366">
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png">
+    <link class="apple-touch-icon" href="https://raw.githubusercontent.com/smart23366/school-band-management/main/icons/STBANDSOO.png">
     <script>
         const manifestJSON = {
             "name": "วงโยธวาธิต ST",
@@ -419,11 +419,28 @@
         }
     }
 
+    // 🚩 ฟังก์ชันถอดหมวดหมู่เครื่องเป่าในวงเล็บ ()
+    function getStudentSection(name) {
+        const match = name.match(/\(([^)]+)\)/);
+        return match ? match[1].trim() : 'อื่น ๆ';
+    }
+
+    // 🚩 ฟังก์ชันจัดเรียงเด็กกลุ่ม Active แยกหมวดเครื่องเป่าให้เป็นระเบียบ
+    function getSortedActiveStudents() {
+        return (ALL_DATA.students || [])
+            .filter(s => s.name && s.name.trim() !== '' && s.status !== 'Resigned')
+            .sort((a, b) => {
+                const secA = getStudentSection(a.name); const secB = getStudentSection(b.name);
+                if (secA !== secB) return secA.localeCompare(secB, 'th');
+                return a.name.localeCompare(b.name, 'th');
+            });
+    }
+
     function initTomSelect() {
         tsStudentInstances.forEach(ts => ts.destroy()); tsInstInstances.forEach(ts => ts.destroy());
         tsStudentInstances = []; tsInstInstances = [];
         
-        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
+        const activeStdOptions = getSortedActiveStudents().map(s => { return { value: s.name, text: s.name }; });
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
 
         document.querySelectorAll('.student-dropdown').forEach(el => {
@@ -446,7 +463,7 @@
     }
 
     function updateDropdowns() {
-        const activeStdOptions = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => { return { value: s.name, text: s.name }; }).filter(s => s.value);
+        const activeStdOptions = getSortedActiveStudents().map(s => { return { value: s.name, text: s.name }; });
         const instOptions = (ALL_DATA.instruments || []).map(i => { const val = (typeof i === 'object') ? i.instrument : i; return { value: val, text: val }; }).filter(i => i.value);
         tsStudentInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(activeStdOptions); if(v) ts.setValue(v); });
         tsInstInstances.forEach(ts => { const v = ts.getValue(); ts.clearOptions(); ts.addOptions(instOptions); if(v) ts.setValue(v); });
@@ -543,7 +560,7 @@
 
     function renderMembers() {
         if(!document.querySelector('#tableActive tbody')) return;
-        const activeList = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned');
+        const activeList = getSortedActiveStudents();
         const resignedList = (ALL_DATA.students || []).filter(s => s.status === 'Resigned');
 
         document.querySelector('#tableActive tbody').innerHTML = activeList.map(s => `<tr><td class="fw-bold">${s.name}</td><td class="text-end admin-only"><button class="btn btn-sm btn-outline-danger" onclick="changeStudentStatus('${s.name}', 'Resigned')"><i class="fas fa-ban me-1"></i>ให้ออก</button></td></tr>`).join('');
@@ -558,7 +575,7 @@
         const amt = document.getElementById('camp_amt').value;
         const dateCreated = document.getElementById('camp_date').value || new Date().toISOString().split('T')[0];
 
-        const activeStudents = (ALL_DATA.students || []).filter(s => s.status !== 'Resigned').map(s => s.name);
+        const activeStudents = getSortedActiveStudents().map(s => s.name);
         if(activeStudents.length === 0) return Swal.fire('แจ้งเตือน', 'ไม่มีรายชื่อสมาชิกในระบบ', 'warning');
 
         const campaignData = [campId, type, title, amt, dateCreated];
@@ -596,28 +613,47 @@
         if(oldVal) sel.value = oldVal; renderFeeTable();
     }
 
+    // 🚩 ตารางรับเงินประจำรอบ (ดึงเด็กกลุ่ม Active ทั้งหมดเป็นหลัก แก้บั๊กรายชื่อเด็กใหม่ไม่ขึ้น)
     function renderFeeTable() {
         const campId = document.getElementById('select_campaign').value;
         if(!campId) { document.querySelector('#tableFee tbody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">กรุณาเลือกรอบการเก็บเงินด้านบน</td></tr>'; document.getElementById('fee_summary').innerHTML = ''; return; }
 
         const camp = ALL_DATA.feecampaigns.find(c => c.id == campId);
+        const activeStudents = getSortedActiveStudents();
         let pays = (ALL_DATA.feepayments || []).filter(p => p.campaign_id == campId);
-        pays = pays.filter(p => ALL_DATA.students.find(s => s.name === p.student_name && s.status !== 'Resigned')); 
 
-        const paidCount = pays.filter(p => p.status === '✔️').length;
-        document.getElementById('fee_summary').innerHTML = `<span>ยอดที่เรียกเก็บ: ${camp.amount} บ./คน</span> <span>ยอดที่ชำระแล้ว: <span class="text-success">${paidCount}/${pays.length}</span> คน</span>`;
+        let paidCount = 0; 
+        let html = ""; 
+        let currentSection = "";
 
-        document.querySelector('#tableFee tbody').innerHTML = pays.map(p => {
+        activeStudents.forEach(s => {
+            const sec = getStudentSection(s.name);
+            if (currentSection && currentSection !== sec) {
+                html += `<tr class="table-light"><td colspan="3" class="text-start fw-bold text-muted bg-light py-1" style="font-size:0.75rem;"><i class="fas fa-chevron-down me-1"></i> กลุ่มเครื่องเป่า (${sec})</td></tr>`;
+            }
+            currentSection = sec;
+
+            let p = pays.find(pay => pay.student_name === s.name);
+            
+            // ⚙️ ตรวจจับเด็กใหม่ หากไม่มีใบแจ้งหนี้รอบในอดีต ให้จำลองปุ่มสีแดง ❌ ขึ้นมารองรับทันที
+            if (!p) {
+                p = { id: campId + "_" + s.name, campaign_id: campId, student_name: s.name, status: '❌', pay_date: '' };
+            }
+
+            if (p.status === '✔️') paidCount++;
             let btnClass = 'unpaid'; let btnText = '❌ ยังไม่จ่าย';
             if (p.status === '✔️') { btnClass = 'paid'; btnText = '✔️ จ่ายแล้ว'; }
             else if (p.status === '✨') { btnClass = 'exempt'; btnText = '✨ ไม่ต้องจ่าย'; }
 
-            return `<tr>
+            html += `<tr>
                 <td class="fw-bold text-start">${p.student_name}</td>
                 <td><small class="text-muted">${p.pay_date ? formatThaiDate(p.pay_date) : '-'}</small></td>
                 <td class="text-center"><button class="btn-check-pay ${btnClass} w-100" onclick="openPaymentMenu('${p.id}', '${p.student_name}', '${campId}', '${camp.type}')">${btnText}</button></td>
             </tr>`;
-        }).join('');
+        });
+
+        document.getElementById('fee_summary').innerHTML = `<span>ยอดที่เรียกเก็บ: ${camp.amount} บ./คน</span> <span>ยอดที่ชำระแล้ว: <span class="text-success">${paidCount}/${activeStudents.length}</span> คน</span>`;
+        document.querySelector('#tableFee tbody').innerHTML = html;
     }
 
     function openPaymentMenu(payId, studentName, campId, campType) {
@@ -658,9 +694,17 @@
             else if (result.dismiss === Swal.DismissReason.cancel) { newStatus = '❌'; payDate = ''; } 
 
             let currentPay = ALL_DATA.feepayments.find(p => p.id == payId);
-            currentPay.status = newStatus; currentPay.pay_date = payDate;
-            addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'status', newValue:newStatus});
-            addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'pay_date', newValue:payDate});
+            
+            // หากระบบตรวจสอบแล้วว่าไม่มีข้อมูลแถวในชีต สั่งให้แอปสับเปลี่ยนฟังก์ชันเป็น 'add' (สร้างแถวใหม่) ลง Google Sheets เผื่อเด็กใหม่ทันที
+            if (!currentPay) {
+                currentPay = { id: payId, campaign_id: campId, student_name: studentName, status: newStatus, pay_date: payDate };
+                ALL_DATA.feepayments.push(currentPay);
+                addToQueue({ type: 'add', sheetName: 'FeePayments', values: [payId, campId, studentName, newStatus, payDate] });
+            } else {
+                currentPay.status = newStatus; currentPay.pay_date = payDate;
+                addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'status', newValue:newStatus});
+                addToQueue({type:'update', sheetName:'FeePayments', id:payId, columnName:'pay_date', newValue:payDate});
+            }
             
             renderAll();
         });
@@ -758,13 +802,6 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-        let summaryRow = ["รวม (จำนวนคนที่จ่าย)"];
-        sortedCampaigns.forEach(camp => {
-            const paidCount = (ALL_DATA.feepayments || []).filter(p => p.campaign_id == camp.id && p.status === '✔️').length;
-            summaryRow.push(paidCount + " คน");
-        });
-        csvContent += summaryRow.map(r => `"${r}"`).join(",") + "\r\n";
     }
 
     function renderAll() {
@@ -777,6 +814,7 @@
         }).join('');
 
         if(document.querySelector('#tableLate tbody')) document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['note'], 'note');
+        // 🛠️ แก้ไขบั๊กสลับ Selector การแสดงผลในตารางของหน้าผิดวินัย (Misconduct) เรียบร้อย
         if(document.querySelector('#tableMisc tbody')) document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail'], 'detail');
         if(document.querySelector('#tableAbsent tbody')) document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note');
         
@@ -813,22 +851,21 @@
     }
 
     function renderAbsent() {
-        const tableBody = document.querySelector('#absentTable tbody'); 
+        const tableBody = document.querySelector('#tableAbsent tbody'); 
         if (!tableBody) return;
 
         const list = ALL_DATA.absent || [];
 
         tableBody.innerHTML = list.map(r => `
             <tr>
-                <td>${r.id || '-'}</td>
-                <td>${r.date || '-'}</td>
+                <td>${formatThaiDate(r.date)}</td>
                 <td class="fw-bold">${r.name || '-'}</td>
-                <td>${r.role || '-'}</td>
+                <td><span class="badge bg-secondary">${r.role || '-'}</span></td>
                 <td>${r.type || '-'}</td>
                 <td>${r.note || '-'}</td>
                 <td>
                     <span class="badge ${r.status === 'approved' ? 'bg-success' : 'bg-warning text-dark'}">
-                        ${r.status === 'approved' ? 'อนุมัติแล้ว' : 'รอดำเนินการ'}
+                        ${r.status === 'approved' ? 'ผ่าน' : 'รอตรวจ'}
                     </span>
                 </td>
             </tr>

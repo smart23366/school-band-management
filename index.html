@@ -419,13 +419,11 @@
         }
     }
 
-    // 🚩 ฟังก์ชันถอดหมวดหมู่เครื่องเป่าในวงเล็บ ()
     function getStudentSection(name) {
         const match = name.match(/\(([^)]+)\)/);
         return match ? match[1].trim() : 'อื่น ๆ';
     }
 
-    // 🚩 ฟังก์ชันจัดเรียงเด็กกลุ่ม Active แยกหมวดเครื่องเป่าให้เป็นระเบียบ
     function getSortedActiveStudents() {
         return (ALL_DATA.students || [])
             .filter(s => s.name && s.name.trim() !== '' && s.status !== 'Resigned')
@@ -613,7 +611,6 @@
         if(oldVal) sel.value = oldVal; renderFeeTable();
     }
 
-    // 🚩 ตารางรับเงินประจำรอบ (ดึงเด็กกลุ่ม Active ทั้งหมดเป็นหลัก แก้บั๊กรายชื่อเด็กใหม่ไม่ขึ้น)
     function renderFeeTable() {
         const campId = document.getElementById('select_campaign').value;
         if(!campId) { document.querySelector('#tableFee tbody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">กรุณาเลือกรอบการเก็บเงินด้านบน</td></tr>'; document.getElementById('fee_summary').innerHTML = ''; return; }
@@ -635,7 +632,6 @@
 
             let p = pays.find(pay => pay.student_name === s.name);
             
-            // ⚙️ ตรวจจับเด็กใหม่ หากไม่มีใบแจ้งหนี้รอบในอดีต ให้จำลองปุ่มสีแดง ❌ ขึ้นมารองรับทันที
             if (!p) {
                 p = { id: campId + "_" + s.name, campaign_id: campId, student_name: s.name, status: '❌', pay_date: '' };
             }
@@ -656,6 +652,7 @@
         document.querySelector('#tableFee tbody').innerHTML = html;
     }
 
+    // 🚩 แก้ไขจุดที่ 1: ลบการบล็อกแจ้งเตือนเรื่องติดค้างยอดเก่าออกทั้งหมด
     function openPaymentMenu(payId, studentName, campId, campType) {
         if(!isAdm()) return Swal.fire('สิทธิ์ไม่เพียงพอ', 'เฉพาะ Admin เท่านั้นที่สามารถอัปเดตสถานะเงินได้ครับ', 'warning');
 
@@ -676,11 +673,7 @@
             let newStatus = '❌'; let payDate = '';
 
             if (result.isConfirmed) { 
-                let unpaidPrior = priorRecords.find(p => p.status === '❌');
-                if (unpaidPrior) {
-                    let priorCamp = ALL_DATA.feecampaigns.find(c => c.id == unpaidPrior.campaign_id);
-                    return Swal.fire('ติดค้างยอดเก่า!', `กรุณาเคลียร์ <b>${priorCamp.title}</b> ก่อนรับยอดรอบนี้ครับ`, 'warning');
-                }
+                // สามารถกดจ่ายได้เลย ไม่มีการบล็อกยอดเก่าแล้ว
                 newStatus = '✔️'; payDate = new Date().toISOString().split('T')[0];
             } 
             else if (result.isDenied) { 
@@ -695,7 +688,6 @@
 
             let currentPay = ALL_DATA.feepayments.find(p => p.id == payId);
             
-            // หากระบบตรวจสอบแล้วว่าไม่มีข้อมูลแถวในชีต สั่งให้แอปสับเปลี่ยนฟังก์ชันเป็น 'add' (สร้างแถวใหม่) ลง Google Sheets เผื่อเด็กใหม่ทันที
             if (!currentPay) {
                 currentPay = { id: payId, campaign_id: campId, student_name: studentName, status: newStatus, pay_date: payDate };
                 ALL_DATA.feepayments.push(currentPay);
@@ -814,7 +806,6 @@
         }).join('');
 
         if(document.querySelector('#tableLate tbody')) document.querySelector('#tableLate tbody').innerHTML = bR(ALL_DATA.late, 'Late', ['note'], 'note');
-        // 🛠️ แก้ไขบั๊กสลับ Selector การแสดงผลในตารางของหน้าผิดวินัย (Misconduct) เรียบร้อย
         if(document.querySelector('#tableMisc tbody')) document.querySelector('#tableMisc tbody').innerHTML = bR(ALL_DATA.misconduct, 'Misconduct', ['type', 'level', 'detail'], 'detail');
         if(document.querySelector('#tableAbsent tbody')) document.querySelector('#tableAbsent tbody').innerHTML = bR(ALL_DATA.absent, 'Absent', ['type', 'note'], 'note');
         
@@ -872,27 +863,17 @@
         `).join('');
     }
 
+    // 🚩 แก้ไขจุดที่ 2: ปรับสูตรคำนวณการเงิน ไม่ให้บวกบิลเก็บเงินซ้ำซ้อนกับเงินที่กรอกเข้าตารางรายรับ (ป้องกันเงินลอยเกินจริง)
     function calculateFinance() {
         if(!document.getElementById('f-in')) return;
         
-        let normalIncome = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0); 
+        // คำนวณรายรับทั้งหมด (เฉพาะที่มาจากการกด "บันทึกรายรับ" เพื่อป้องกันยอดซ้ำซ้อนกับการเก็บเงิน)
+        let inc = (ALL_DATA.income || []).reduce((s, i) => s + Number(i.amount), 0); 
         
-        let billIncome = 0;
-        if (ALL_DATA.feepayments && ALL_DATA.feecampaigns) {
-            (ALL_DATA.feepayments || []).forEach(p => {
-                if (p.status === '✔️') {
-                    const camp = ALL_DATA.feecampaigns.find(c => c.id == p.campaign_id);
-                    if (camp) {
-                        billIncome += Number(camp.amount);
-                    }
-                }
-            });
-        }
-
-        let inc = normalIncome + billIncome;
-        
+        // คำนวณรายจ่ายเฉพาะที่ "อนุมัติแล้ว"
         let exp = (ALL_DATA.expense || []).filter(e => e.status === 'approved').reduce((s, i) => s + Number(i.amount), 0);
         
+        // แสดงผลรวม
         document.getElementById('f-in').innerText = '฿' + inc.toLocaleString(); 
         document.getElementById('f-out').innerText = '฿' + exp.toLocaleString(); 
         document.getElementById('f-bal').innerText = '฿' + (inc - exp).toLocaleString();
